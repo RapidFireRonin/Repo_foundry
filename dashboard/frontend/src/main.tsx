@@ -58,6 +58,18 @@ type PrStatusSnapshot = {
   };
 };
 
+type DirectionItem = {
+  title: string;
+  priority: number;
+  scope: string;
+  desired_outcome: string;
+  details: string;
+  avoid: string[];
+  status: string;
+  source: string;
+  created_at: string;
+};
+
 type DashboardState = {
   repos: Item[];
   blueprints: Item[];
@@ -65,17 +77,7 @@ type DashboardState = {
   prs: Item[];
   logs: Item[];
   artifacts: Item[];
-  directions: Array<{
-    title: string;
-    priority: number;
-    scope: string;
-    desired_outcome: string;
-    details: string;
-    avoid: string[];
-    status: string;
-    source: string;
-    created_at: string;
-  }>;
+  directions: DirectionItem[];
   watch_items: Item[];
   cycle_entries: Item[];
   completion: {
@@ -281,22 +283,40 @@ function DirectionComposer({ onCreated }: { onCreated: () => Promise<void> }) {
   );
 }
 
-function DirectionQueue({ items }: { items: DashboardState["directions"] }) {
+function DirectionQueue({
+  items,
+  onStatusChange,
+}: {
+  items: DirectionItem[];
+  onStatusChange: (item: DirectionItem, status: "active" | "paused" | "done") => Promise<void>;
+}) {
   return (
     <div className="direction-list">
-      {items.map((item) => (
-        <article className="direction-item" key={`${item.created_at}-${item.scope}-${item.title}`}>
-          <div className="priority">{item.priority}</div>
-          <div>
-            <strong>{item.title}</strong>
-            <span>{item.scope} · {item.desired_outcome}</span>
-            {item.details ? <small>{item.details}</small> : null}
-            {item.avoid.length > 0 ? <small>Avoid: {item.avoid.join(", ")}</small> : null}
-            <small>{item.source} · {new Date(item.created_at).toLocaleString()}</small>
-          </div>
-          <code>{item.status}</code>
-        </article>
-      ))}
+      {items.map((item) => {
+        const isActive = item.status === "active";
+        const isPaused = item.status === "paused";
+        const isDone = item.status === "done";
+        return (
+          <article className="direction-item" key={`${item.created_at}-${item.scope}-${item.title}`}>
+            <div className="priority">{item.priority}</div>
+            <div>
+              <strong>{item.title}</strong>
+              <span>{item.scope} · {item.desired_outcome}</span>
+              {item.details ? <small>{item.details}</small> : null}
+              {item.avoid.length > 0 ? <small>Avoid: {item.avoid.join(", ")}</small> : null}
+              <small>{item.source} · {new Date(item.created_at).toLocaleString()}</small>
+            </div>
+            <div className="direction-status-controls">
+              <code>{item.status}</code>
+              <div className="direction-actions" aria-label={`Direction controls for ${item.title}`}>
+                <button type="button" disabled={isActive} onClick={() => onStatusChange(item, "active")}>Reactivate</button>
+                <button type="button" disabled={isPaused} onClick={() => onStatusChange(item, "paused")}>Pause</button>
+                <button type="button" disabled={isDone} onClick={() => onStatusChange(item, "done")}>Done</button>
+              </div>
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -392,6 +412,15 @@ function App() {
     setLoading(false);
   }
 
+  async function updateDirectionStatus(item: DirectionItem, status: "active" | "paused" | "done") {
+    await fetch(`${apiBase}/api/directions/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ created_at: item.created_at, status }),
+    });
+    await refresh();
+  }
+
   useEffect(() => {
     refresh().catch(() => setLoading(false));
   }, []);
@@ -469,7 +498,7 @@ function App() {
             <DirectionComposer onCreated={refresh} />
           </Panel>
           <Panel title="Human Direction Queue" icon={<ListChecks size={18} />} className="panel-directions">
-            <DirectionQueue items={state.directions} />
+            <DirectionQueue items={state.directions} onStatusChange={updateDirectionStatus} />
           </Panel>
           <Panel title="Hourly Cycle Timeline" icon={<History size={18} />}>
             <Timeline items={state.cycle_entries} />
