@@ -30,6 +30,38 @@ button {
   cursor: pointer;
 }
 
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #cbd5df;
+  background: #ffffff;
+  color: #18212b;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+input,
+select {
+  height: 40px;
+  padding: 0 11px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 82px;
+  padding: 10px 11px;
+  line-height: 1.45;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid rgba(14, 143, 134, 0.22);
+  border-color: #0e8f86;
+}
+
 button:disabled {
   opacity: 0.55;
   cursor: default;
@@ -264,6 +296,45 @@ code,
   display: grid;
   gap: 10px;
   padding: 14px;
+}
+
+.direction-composer {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.direction-composer label {
+  display: grid;
+  gap: 6px;
+}
+
+.direction-composer label span {
+  color: #607080;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.composer-actions {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.composer-actions button {
+  justify-content: center;
+  height: 40px;
+  background: #0e8f86;
+  border-color: #0e8f86;
+  color: #ffffff;
+}
+
+.composer-actions button:disabled {
+  background: #dbe5ea;
+  border-color: #dbe5ea;
+  color: #748391;
 }
 
 .review-item,

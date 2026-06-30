@@ -1,38 +1,46 @@
 repos:
-  - owner: RapidFireRonin
-    name: Repo_foundry
-    default_branch: main
-    exists: true
-    labels:
-      - agent-change
-      - autonomous-watch
-      - safety
-    workflows:
-      - .github/workflows/ci.yml
-      - .github/workflows/blueprint-validation.yml
-    memory_files:
-      - AGENT_CONTEXT.md
-      - DECISIONS.md
-      - KNOWN_ISSUES.md
-      - NEXT_STEPS.md
-      - ROADMAP.md
-      - ARCHITECTURE.md
-      - AGENT_CYCLE_LOG.md
-    branch_protection: false
+- owner: RapidFireRonin
+  name: Repo_foundry
+  default_branch: main
+  exists: true
+  labels:
+  - agent-change
+  - autonomous-watch
+  - safety
+  workflows:
+  - .github/workflows/ci.yml
+  - .github/workflows/blueprint-validation.yml
+  memory_files:
+  - AGENT_CONTEXT.md
+  - DECISIONS.md
+  - KNOWN_ISSUES.md
+  - NEXT_STEPS.md
+  - ROADMAP.md
+  - ARCHITECTURE.md
+  - AGENT_CYCLE_LOG.md
+  branch_protection: false
 directions:
-  - title: Complete Repo Foundry control plane
-    priority: 95
-    scope: global
-    desired_outcome: Finish autonomous GitHub execution, dashboard visibility, hourly reporting, and repo templates.
-    avoid:
-      - committing secrets
-      - silent main-branch writes
-    status: active
-  - title: Prefer visibility polish
-    priority: 70
-    scope: RapidFireRonin/Repo_foundry
-    desired_outcome: Keep dashboard, logs, artifacts, and cycle summaries readable for Garrett.
-    avoid:
-      - raw-only logs
-      - hidden failures
-    status: active
+- title: Complete Repo Foundry control plane
+  priority: 95
+  scope: global
+  desired_outcome: Finish autonomous GitHub execution, dashboard visibility, hourly
+    reporting, and repo templates.
+  details: ''
+  avoid:
+  - committing secrets
+  - silent main-branch writes
+  status: active
+  source: manual
+  created_at: '2026-06-30T03:50:12.573839Z'
+- title: Prefer visibility polish
+  priority: 70
+  scope: RapidFireRonin/Repo_foundry
+  desired_outcome: Keep dashboard, logs, artifacts, and cycle summaries readable for
+    Garrett.
+  details: ''
+  avoid:
+  - raw-only logs
+  - hidden failures
+  status: active
+  source: manual
+  created_at: '2026-06-30T03:50:12.573839Z'

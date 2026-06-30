@@ -100,8 +100,11 @@ class DirectionItem(BaseModel):
     priority: int = Field(default=50, ge=0, le=100)
     scope: str = "global"
     desired_outcome: str
+    details: str = ""
     avoid: list[str] = Field(default_factory=list)
     status: str = "active"
+    source: str = "manual"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Registry(BaseModel):

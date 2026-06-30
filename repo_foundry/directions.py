@@ -19,7 +19,9 @@ def add_direction(
     desired_outcome: str,
     priority: int = 80,
     scope: str = "global",
+    details: str = "",
     avoid: list[str] | None = None,
+    source: str = "manual",
     registry_path: str | Path = "registry/repos.yaml",
 ) -> DirectionItem:
     path = Path(registry_path)
@@ -29,11 +31,13 @@ def add_direction(
         desired_outcome=desired_outcome,
         priority=priority,
         scope=scope,
+        details=details,
         avoid=avoid or [],
+        source=source,
     )
     registry.directions.append(item)
     path.write_text(yaml.safe_dump(registry.model_dump(mode="json"), sort_keys=False), encoding="utf-8")
-    write_audit_event("direction_add", title, priority=priority, scope=scope)
+    write_audit_event("direction_add", title, priority=priority, scope=scope, source=source)
     return item
 
 
@@ -47,6 +51,7 @@ def main() -> None:
     add_parser.add_argument("desired_outcome")
     add_parser.add_argument("--priority", type=int, default=80)
     add_parser.add_argument("--scope", default="global")
+    add_parser.add_argument("--details", default="")
     add_parser.add_argument("--avoid", action="append", default=[])
     add_parser.add_argument("--registry", default="registry/repos.yaml")
     args = parser.parse_args()
@@ -55,7 +60,7 @@ def main() -> None:
         for item in list_directions(args.registry):
             print(f"{item.priority:03d} {item.scope} {item.title}: {item.desired_outcome}")
     if args.command == "add":
-        item = add_direction(args.title, args.desired_outcome, args.priority, args.scope, args.avoid, args.registry)
+        item = add_direction(args.title, args.desired_outcome, args.priority, args.scope, args.details, args.avoid, "cli", args.registry)
         print(item.model_dump_json(indent=2))
 
 

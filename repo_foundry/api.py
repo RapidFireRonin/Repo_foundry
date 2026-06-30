@@ -6,9 +6,11 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from repo_foundry.cycle_summary import append_summary, sample_summary
 from repo_foundry.db import fetch_dashboard_items, init_db
+from repo_foundry.directions import add_direction
 from repo_foundry.models import DashboardState, repo_root
 from repo_foundry.reconcile import build_plan, load_registry
 
@@ -28,6 +30,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class DirectionCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    desired_outcome: str = Field(min_length=1, max_length=1000)
+    details: str = Field(default="", max_length=2000)
+    priority: int = Field(default=80, ge=0, le=100)
+    scope: str = Field(default="global", max_length=160)
 
 
 @app.on_event("startup")
@@ -68,6 +78,20 @@ def cycle_log() -> dict[str, str]:
 def append_sample_cycle() -> dict[str, str]:
     path = append_summary(sample_summary())
     return {"path": str(path), "status": "appended"}
+
+
+@app.post("/api/directions")
+def create_direction(request: DirectionCreateRequest) -> dict:
+    item = add_direction(
+        title=request.title.strip(),
+        desired_outcome=request.desired_outcome.strip(),
+        priority=request.priority,
+        scope=request.scope.strip() or "global",
+        details=request.details.strip(),
+        source="dashboard",
+        registry_path=repo_root() / "registry" / "repos.yaml",
+    )
+    return item.model_dump(mode="json")
 
 
 @app.get("/api/reconcile/example")

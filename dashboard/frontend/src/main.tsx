@@ -10,6 +10,7 @@ import {
   Hammer,
   History,
   ListChecks,
+  Send,
   RefreshCcw,
   ShieldCheck,
 } from "lucide-react";
@@ -36,8 +37,11 @@ type DashboardState = {
     priority: number;
     scope: string;
     desired_outcome: string;
+    details: string;
     avoid: string[];
     status: string;
+    source: string;
+    created_at: string;
   }>;
   watch_items: Item[];
   cycle_entries: Item[];
@@ -139,16 +143,85 @@ function Timeline({ items }: { items: Item[] }) {
   );
 }
 
+function DirectionComposer({ onCreated }: { onCreated: () => Promise<void> }) {
+  const [title, setTitle] = useState("");
+  const [details, setDetails] = useState("");
+  const [priority, setPriority] = useState(80);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const cleanTitle = title.trim();
+    if (!cleanTitle) return;
+    setSubmitting(true);
+    await fetch(`${apiBase}/api/directions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: cleanTitle,
+        desired_outcome: cleanTitle,
+        details: details.trim(),
+        priority,
+        scope: "global",
+      }),
+    });
+    setTitle("");
+    setDetails("");
+    setPriority(80);
+    await onCreated();
+    setSubmitting(false);
+  }
+
+  return (
+    <form className="direction-composer" onSubmit={submit}>
+      <label>
+        <span>Goal</span>
+        <textarea
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Build X, focus on GitHub adapter, improve dashboard..."
+          rows={3}
+        />
+      </label>
+      <label>
+        <span>Details</span>
+        <input
+          value={details}
+          onChange={(event) => setDetails(event.target.value)}
+          placeholder="Optional constraints, context, or desired finish line"
+        />
+      </label>
+      <div className="composer-actions">
+        <label>
+          <span>Priority</span>
+          <select value={priority} onChange={(event) => setPriority(Number(event.target.value))}>
+            <option value={95}>Critical</option>
+            <option value={80}>High</option>
+            <option value={60}>Normal</option>
+            <option value={35}>Later</option>
+          </select>
+        </label>
+        <button type="submit" disabled={submitting || !title.trim()}>
+          <Send size={16} />
+          Direct Agents
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function DirectionQueue({ items }: { items: DashboardState["directions"] }) {
   return (
     <div className="direction-list">
       {items.map((item) => (
-        <article className="direction-item" key={`${item.scope}-${item.title}`}>
+        <article className="direction-item" key={`${item.created_at}-${item.scope}-${item.title}`}>
           <div className="priority">{item.priority}</div>
           <div>
             <strong>{item.title}</strong>
             <span>{item.scope} · {item.desired_outcome}</span>
+            {item.details ? <small>{item.details}</small> : null}
             {item.avoid.length > 0 ? <small>Avoid: {item.avoid.join(", ")}</small> : null}
+            <small>{item.source} · {new Date(item.created_at).toLocaleString()}</small>
           </div>
           <code>{item.status}</code>
         </article>
@@ -245,6 +318,9 @@ function App() {
           </Panel>
           <Panel title="Autonomous Watchlist" icon={<AlertTriangle size={18} />}>
             <WatchQueue items={state.watch_items} />
+          </Panel>
+          <Panel title="Direct the Agents" icon={<Send size={18} />}>
+            <DirectionComposer onCreated={refresh} />
           </Panel>
           <Panel title="Human Direction Queue" icon={<ListChecks size={18} />}>
             <DirectionQueue items={state.directions} />
