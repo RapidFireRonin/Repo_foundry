@@ -474,6 +474,13 @@ function ItemTable({ items }: { items: Item[] }) {
   );
 }
 
+function EmptyAwareItemTable({ items, emptyText }: { items: Item[]; emptyText: string }) {
+  if (!items.length) {
+    return <div className="empty-panel">{emptyText}</div>;
+  }
+  return <ItemTable items={items} />;
+}
+
 function WatchQueue({ items }: { items: Item[] }) {
   return (
     <div className="review-list">
@@ -969,21 +976,18 @@ function App() {
   const [state, setState] = useState<DashboardState>(emptyState);
   const [mission, setMission] = useState<MissionControlState>(emptyMission);
   const [cycleLog, setCycleLog] = useState("");
-  const [plan, setPlan] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
     setLoading(true);
-    const [dashboard, log, reconcile, missionControl] = await Promise.all([
+    const [dashboard, log, missionControl] = await Promise.all([
       fetch(`${apiBase}/api/dashboard`).then((r) => r.json()),
       fetch(`${apiBase}/api/cycle-log`).then((r) => r.json()),
-      fetch(`${apiBase}/api/reconcile/example`).then((r) => r.json()),
       fetch(`${apiBase}/api/mission-control`).then((r) => r.json()),
     ]);
     setState(dashboard);
     setMission(missionControl);
     setCycleLog(log.content);
-    setPlan(reconcile);
     setLoading(false);
   }
 
@@ -1024,13 +1028,20 @@ function App() {
             <span>Local control plane</span>
           </div>
         </div>
-        <nav>
-          <a className="active"><ListChecks size={17} /> Dashboard</a>
-          <a><FileText size={17} /> Blueprints</a>
-          <a><GitPullRequest size={17} /> Pull Requests</a>
-          <a><History size={17} /> Cycle Log</a>
-          <a><Archive size={17} /> Artifacts</a>
-        </nav>
+        <div className="sidebar-status">
+          <div>
+            <span>Status</span>
+            <strong>{mission.executive_status.status}</strong>
+          </div>
+          <div>
+            <span>Phone URL</span>
+            <strong>{mission.operator_access.primary_phone_url}</strong>
+          </div>
+          <div>
+            <span>Mode</span>
+            <strong>Direct and watch</strong>
+          </div>
+        </div>
       </aside>
 
       <section className="content">
@@ -1051,6 +1062,10 @@ function App() {
 
         <BuildConsole controls={mission.product_controls} onBuild={buildSuggestedDirection} onCreated={refresh} />
 
+        <Panel title="Active Direction Queue" icon={<ListChecks size={18} />} className="panel-directions operator-priority">
+          <DirectionQueue items={state.directions} onStatusChange={updateDirectionStatus} />
+        </Panel>
+
         <div className="metrics">
           {counts.map(([label, value]) => (
             <div className="metric" key={label}>
@@ -1061,23 +1076,26 @@ function App() {
         </div>
 
         <div className="mission-grid">
-          <Panel title="10/10 Scorecard" icon={<ListChecks size={18} />}>
-            <ScorecardPanel scorecard={mission.scorecard} />
-          </Panel>
-          <Panel title="What Changed" icon={<History size={18} />}>
-            <WhatChangedPanel items={mission.changes} />
-          </Panel>
           <Panel title="Agent Activity Lanes" icon={<Sparkles size={18} />}>
             <AgentActivityPanel activity={mission.agent_activity} />
-          </Panel>
-          <Panel title="Visual Proof" icon={<Eye size={18} />}>
-            <VisualEvidencePanel evidence={mission.visual_evidence} />
           </Panel>
           <Panel title="Products Created" icon={<MonitorSmartphone size={18} />} className="panel-products">
             <ProductShowcasePanel showcase={mission.product_showcase} />
           </Panel>
+          <Panel title="Visual Proof" icon={<Eye size={18} />}>
+            <VisualEvidencePanel evidence={mission.visual_evidence} />
+          </Panel>
           <Panel title="Quality Verdicts" icon={<CheckCircle2 size={18} />}>
             <QualityVerdictsPanel activity={mission.agent_activity} />
+          </Panel>
+          <Panel title="What Changed" icon={<History size={18} />}>
+            <WhatChangedPanel items={mission.changes} />
+          </Panel>
+          <Panel title="Autonomous Completion" icon={<CheckCircle2 size={18} />} className="panel-completion">
+            <CompletionPanel completion={state.completion} />
+          </Panel>
+          <Panel title="Scorecard" icon={<ListChecks size={18} />}>
+            <ScorecardPanel scorecard={mission.scorecard} />
           </Panel>
           <Panel title="Local PR Shipper" icon={<Hammer size={18} />}>
             <ShipperPanel shipper={mission.shipper} />
@@ -1088,35 +1106,20 @@ function App() {
           <Panel title="Safety" icon={<ShieldCheck size={18} />}>
             <SafetyPanel warning={mission.token_warning} />
           </Panel>
-          <Panel title="Project Guidance" icon={<FileText size={18} />}>
-            <ProjectGuidancePanel guidance={mission.project_guidance} />
-          </Panel>
         </div>
 
         <div className="grid">
           <Panel title="Managed Repos" icon={<ShieldCheck size={18} />}>
-            <ItemTable items={state.repos} />
+            <EmptyAwareItemTable items={state.repos} emptyText="No managed repo registry rows have been loaded yet." />
           </Panel>
           <Panel title="Blueprint Drift" icon={<FileText size={18} />}>
-            <ItemTable items={state.blueprints} />
-          </Panel>
-          <Panel title="Agent Runs" icon={<Hammer size={18} />}>
-            <ItemTable items={state.runs} />
+            <EmptyAwareItemTable items={state.blueprints} emptyText="No blueprint drift items are currently visible." />
           </Panel>
           <Panel title="Pull Requests" icon={<GitPullRequest size={18} />}>
-            <ItemTable items={state.prs} />
-          </Panel>
-          <Panel title="Autonomous Completion" icon={<CheckCircle2 size={18} />} className="panel-completion">
-            <CompletionPanel completion={state.completion} />
+            <EmptyAwareItemTable items={state.prs} emptyText="No dashboard PR rows are currently visible. PR status still appears in Autonomous Completion." />
           </Panel>
           <Panel title="Autonomous Watchlist" icon={<AlertTriangle size={18} />}>
             <WatchQueue items={state.watch_items} />
-          </Panel>
-          <Panel title="Direct the Agents" icon={<Send size={18} />} className="panel-direct">
-            <DirectionComposer onCreated={refresh} />
-          </Panel>
-          <Panel title="Human Direction Queue" icon={<ListChecks size={18} />} className="panel-directions">
-            <DirectionQueue items={state.directions} onStatusChange={updateDirectionStatus} />
           </Panel>
           <Panel title="Hourly Cycle Timeline" icon={<History size={18} />}>
             <Timeline items={state.cycle_entries} />
@@ -1124,11 +1127,8 @@ function App() {
         </div>
 
         <div className="wide-grid">
-          <Panel title="Reconcile Plan" icon={<ListChecks size={18} />} action={<span className="pill">dry-run</span>}>
-            <pre>{JSON.stringify(plan, null, 2)}</pre>
-          </Panel>
           <Panel title="Logs and Artifacts" icon={<Archive size={18} />}>
-            <ItemTable items={[...state.logs, ...state.artifacts]} />
+            <EmptyAwareItemTable items={[...state.logs, ...state.artifacts]} emptyText="No log or artifact rows are currently loaded." />
           </Panel>
           <Panel title="Readable Cycle Log" icon={<CheckCircle2 size={18} />}>
             <pre>{cycleLog || "Cycle log is ready for the next hourly append."}</pre>
