@@ -94,6 +94,7 @@
     .fill.danger { background: linear-gradient(90deg, var(--danger), #ffb266); }
     .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
     .tag { border: 1px solid var(--line); border-radius: 999px; padding: 7px 9px; background: rgba(255,255,255,0.07); font-size: 0.82rem; color: var(--muted); }
+    .tag.done { color: var(--good); border-color: rgba(125, 255, 189, 0.35); background: rgba(125, 255, 189, 0.08); }
     .story { min-height: 440px; padding: 22px; position: relative; overflow: hidden; }
     .story:before {
       content: "";
@@ -116,7 +117,7 @@
     .time-controls button.active.present { border-color: var(--present); color: var(--present); }
     .time-controls button.active.future { border-color: var(--future); color: var(--future); }
     .timeline-map { display: grid; gap: 10px; }
-    .timeline-node { border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: rgba(255,255,255,0.06); }
+    .timeline-node { border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: rgba(255,255,255,0.06); text-align: left; }
     .timeline-node.active { outline: 2px solid currentColor; }
     .timeline-node.past { color: var(--past); }
     .timeline-node.present { color: var(--present); }
@@ -128,6 +129,10 @@
     .meter-big { margin-top: 10px; border: 1px solid var(--line); border-radius: 16px; padding: 12px; background: rgba(0,0,0,0.16); }
     .relations { display: grid; gap: 10px; }
     .relation { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; color: var(--muted); }
+    .playtest-card { margin-top: 18px; border: 1px solid rgba(125, 255, 189, 0.28); background: rgba(125, 255, 189, 0.07); border-radius: 16px; padding: 12px; }
+    .playtest-card ol { margin: 8px 0 0; padding-left: 1.2rem; color: var(--muted); line-height: 1.5; }
+    .playtest-card li.done { color: var(--good); font-weight: 800; }
+    .proof-note { margin-top: 10px; color: var(--good); font-weight: 900; }
     @media (max-width: 980px) {
       .layout { grid-template-columns: 1fr; }
       .hero { grid-template-columns: 1fr; }
@@ -186,6 +191,11 @@
           <div id="sceneText" class="scene-text"></div>
           <div id="objective" class="objective"></div>
           <div id="ending" class="ending" hidden></div>
+          <div class="playtest-card">
+            <strong>Critical time-travel proof path</strong>
+            <ol id="playtestSteps"></ol>
+            <div class="proof-note" id="proofNote">Prove the loop: Future clue → safer Past change → Present seal.</div>
+          </div>
         </article>
         <div id="choices" class="choices"></div>
       </section>
@@ -206,11 +216,19 @@
   </main>
 
   <script>
-    const storeKey = "chrono-rift-save-v2";
+    const storeKey = "chrono-rift-save-v3";
     const timelineNodes = [
-      { period: "past", title: "Yesterday's Market", goal: "Steal or redirect the blue lantern before midnight." },
+      { period: "past", title: "Yesterday's Market", goal: "Redirect the blue lantern before midnight." },
       { period: "present", title: "The Broken Gate", goal: "Use altered evidence to reach the clockheart." },
       { period: "future", title: "Tomorrow's Ruins", goal: "Learn what destroyed the city and bring proof back." }
+    ];
+    const playtestPath = [
+      { id: "future", text: "Jump to the Future and read the monument inscription.", done: () => has("clues", "Lantern overcharged the tower gear") },
+      { id: "past", text: "Jump to the Past and use the future clue to safely discharge the Guild crate.", done: () => has("clues", "Guild crate safely discharged") },
+      { id: "lantern", text: "Secure the Blue Lantern and bring it back to the Present.", done: () => has("inventory", "Blue Lantern") },
+      { id: "fuse", text: "Steal the Chronal Fuse from the Future.", done: () => has("inventory", "Chronal Fuse") },
+      { id: "truth", text: "Learn Vale's lie, confront Vale, and get the confession.", done: () => has("clues", "Vale confession") },
+      { id: "seal", text: "Throttle the lantern, fit the fuse, then seal the rift.", done: () => state.ending?.title === "Chapter Complete" }
     ];
     const initialState = () => ({
       period: "present",
@@ -343,7 +361,7 @@
       document.getElementById("stats").innerHTML = Object.entries(state.stats).map(([name, value]) => `<div class="stat"><div class="stat-top"><span>${name}</span><strong>${value}/10</strong></div><div class="bar"><div class="fill" style="--value:${value * 10}%"></div></div></div>`).join("");
       document.getElementById("inventory").innerHTML = (state.inventory.length ? state.inventory : ["Empty"]).map(x => `<span class="tag">${x}</span>`).join("");
       document.getElementById("clues").innerHTML = (state.clues.length ? state.clues : ["No clues yet"]).map(x => `<span class="tag">${x}</span>`).join("");
-      document.getElementById("goals").innerHTML = state.goals.map(x => `<span class="tag">${x}</span>`).join("");
+      document.getElementById("goals").innerHTML = state.goals.map(x => `<span class="tag ${x.startsWith("✓") ? "done" : ""}">${x}</span>`).join("");
       document.getElementById("quest").innerHTML = state.quest.map(x => `<span class="tag">${x}</span>`).join("");
       document.getElementById("relations").innerHTML = Object.entries(state.relations).map(([name, value]) => `<div class="relation"><span>${name}</span><strong>${value > 0 ? "+" : ""}${value}</strong></div>`).join("");
       document.getElementById("log").innerHTML = state.log.slice(0, 10).map(x => `<div class="log-entry">${x}</div>`).join("");
@@ -354,6 +372,8 @@
         ["Known clues", state.clues.length],
         ["Outcome", state.ending ? state.ending.title : "In progress"]
       ].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
+      document.getElementById("playtestSteps").innerHTML = playtestPath.map(step => `<li class="${step.done() ? "done" : ""}">${step.done() ? "✓ " : "□ "}${step.text}</li>`).join("");
+      document.getElementById("proofNote").textContent = state.ending?.title === "Chapter Complete" ? "Verified: the chapter ending required knowledge from the future, a changed past, and present repair choices." : "Prove the loop: Future clue → safer Past change → Present seal.";
       const ending = document.getElementById("ending");
       ending.hidden = !state.ending;
       ending.innerHTML = state.ending ? `<strong>${state.ending.title}</strong><p>${state.ending.text}</p>` : "";
