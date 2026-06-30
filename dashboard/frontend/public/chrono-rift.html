@@ -61,6 +61,10 @@
     h1 { margin: 0.25rem 0 0.6rem; font-size: clamp(1.65rem, 4vw, 3rem); line-height: 1; }
     p { margin: 0; color: var(--muted); line-height: 1.5; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .proof-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .proof-strip div { border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: rgba(255,255,255,0.06); }
+    .proof-strip span { display: block; color: var(--muted); font-size: .75rem; font-weight: 800; text-transform: uppercase; }
+    .proof-strip strong { display: block; margin-top: 4px; overflow-wrap: anywhere; }
     .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 300px; gap: 16px; margin-top: 16px; }
     .panel, .story, .choices {
       border: 1px solid var(--line);
@@ -103,7 +107,6 @@
       pointer-events: none;
     }
     .scene-text { position: relative; display: grid; gap: 14px; font-size: 1.02rem; line-height: 1.64; }
-    .scene-text strong { color: #ffffff; }
     .objective { margin-top: 16px; border-left: 4px solid var(--gold); padding: 12px; background: rgba(255, 211, 110, 0.08); color: #ffe8ad; border-radius: 12px; }
     .choices { padding: 16px; margin-top: 16px; display: grid; gap: 10px; }
     .choice { display: block; text-align: left; width: 100%; }
@@ -112,6 +115,13 @@
     .time-controls button.active.past { border-color: var(--past); color: var(--past); }
     .time-controls button.active.present { border-color: var(--present); color: var(--present); }
     .time-controls button.active.future { border-color: var(--future); color: var(--future); }
+    .timeline-map { display: grid; gap: 10px; }
+    .timeline-node { border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: rgba(255,255,255,0.06); }
+    .timeline-node.active { outline: 2px solid currentColor; }
+    .timeline-node.past { color: var(--past); }
+    .timeline-node.present { color: var(--present); }
+    .timeline-node.future { color: var(--future); }
+    .timeline-node span, .timeline-node small { display: block; color: var(--muted); margin-top: 4px; font-size: .78rem; line-height: 1.35; }
     .log { max-height: 260px; overflow: auto; display: grid; gap: 8px; padding-right: 4px; }
     .log-entry { border-left: 3px solid var(--line); padding: 8px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; color: var(--muted); font-size: 0.84rem; }
     .ending { border: 1px solid rgba(255, 211, 110, 0.45); background: rgba(255, 211, 110, 0.09); padding: 16px; border-radius: 16px; margin-top: 16px; }
@@ -122,11 +132,12 @@
       .layout { grid-template-columns: 1fr; }
       .hero { grid-template-columns: 1fr; }
       .hero-actions { justify-content: flex-start; }
+      .proof-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 560px) {
       .game { padding: 12px; }
       .hero, .panel, .story, .choices { border-radius: 16px; }
-      .time-controls { grid-template-columns: 1fr; }
+      .time-controls, .proof-strip { grid-template-columns: 1fr; }
       button { width: 100%; justify-content: center; }
     }
   </style>
@@ -138,6 +149,7 @@
         <span class="eyebrow">Chapter One · The Clocktower Wound</span>
         <h1>Chrono Rift: Echoes of the Broken Hour</h1>
         <p>A text RPG where time travel is not decoration. Learn in the future, change the past, and keep the timeline stable long enough to survive midnight.</p>
+        <div class="proof-strip" id="proofStrip"></div>
       </div>
       <div class="hero-actions">
         <button id="saveBtn">Save</button>
@@ -162,6 +174,8 @@
           <button id="jumpPresent">Present</button>
           <button id="jumpFuture">Future</button>
         </div>
+        <h2 style="margin-top:18px">Timeline Map</h2>
+        <div id="timelineMap" class="timeline-map"></div>
         <h2 style="margin-top:18px">Relationships</h2>
         <div id="relations" class="relations"></div>
       </aside>
@@ -181,6 +195,8 @@
         <div id="inventory" class="tag-list"></div>
         <h2 style="margin-top:18px">Clues</h2>
         <div id="clues" class="tag-list"></div>
+        <h2 style="margin-top:18px">Chapter Goals</h2>
+        <div id="goals" class="tag-list"></div>
         <h2 style="margin-top:18px">Quest Log</h2>
         <div id="quest" class="tag-list"></div>
         <h2 style="margin-top:18px">History</h2>
@@ -190,7 +206,12 @@
   </main>
 
   <script>
-    const storeKey = "chrono-rift-save-v1";
+    const storeKey = "chrono-rift-save-v2";
+    const timelineNodes = [
+      { period: "past", title: "Yesterday's Market", goal: "Steal or redirect the blue lantern before midnight." },
+      { period: "present", title: "The Broken Gate", goal: "Use altered evidence to reach the clockheart." },
+      { period: "future", title: "Tomorrow's Ruins", goal: "Learn what destroyed the city and bring proof back." }
+    ];
     const initialState = () => ({
       period: "present",
       scene: "opening",
@@ -199,8 +220,11 @@
       inventory: [],
       clues: [],
       quest: ["Stop the Clocktower collapse"],
+      goals: ["Visit the future", "Change one past event", "Repair the clockheart"],
       relations: { "Archivist Vale": 0, "Iron Guild": 0 },
       flags: {},
+      visits: { past: 0, present: 1, future: 0 },
+      actions: 0,
       log: ["You wake with three versions of midnight in your head."],
       ending: null
     });
@@ -227,12 +251,14 @@
         period: "past",
         text: [
           "The clocktower still stands. Guild workers haul crates under lantern light.",
-          "One crate hums in a rhythm that matches your pulse. A younger Vale argues with the Iron Guild foreman."
+          "One crate hums in a rhythm that matches your pulse. A younger Vale argues with the Iron Guild foreman.",
+          "The market remembers what you have changed. Your future clues make old choices sharper."
         ],
         objective: "Change the right event before midnight without causing a paradox.",
         choices: [
-          { label: "Buy the blue lantern from a nervous courier", hint: "Costs trust with Iron Guild, gains item", action: () => gain({ item: "Blue Lantern", relation: ["Iron Guild", -1], log: "The courier sells you the lantern and runs. The Guild will remember the theft." }) },
+          { label: "Buy the blue lantern from a nervous courier", hint: "Costs trust with Iron Guild, gains item", action: () => gain({ item: "Blue Lantern", relation: ["Iron Guild", -1], goal: "Change one past event", log: "The courier sells you the lantern and runs. The Guild will remember the theft." }) },
           { label: "Warn younger Vale about the explosion", hint: "Paradox: -twenty stability, +Vale", action: () => gain({ stability: -20, relation: ["Archivist Vale", 2], clue: "Vale can hide one object from the reset", log: "Vale believes you, but the timeline shudders at the impossible warning." }) },
+          { label: "Sabotage the Guild crate quietly", hint: "Requires future overcharge clue; safer past change", require: () => has("clues", "Lantern overcharged the tower gear"), action: () => gain({ clue: "Guild crate safely discharged", relation: ["Iron Guild", -1], goal: "Change one past event", log: "Using future knowledge, you discharge the crate instead of smashing it. The city exhales." }) },
           { label: "Hide the Rusty Gear in the archive wall", hint: "Requires Rusty Gear; creates future proof", require: () => has("inventory", "Rusty Gear"), action: () => gain({ clue: "Gear hidden in archive wall", log: "You hide the gear where only a future memory could find it." }) }
         ]
       },
@@ -241,13 +267,15 @@
         period: "future",
         text: [
           "The city is ash-gray and silent. The clocktower has become a black spine stabbing the sky.",
-          "A cracked monument lists the cause of the collapse: the lantern, the gear, and one witness who lied."
+          "A cracked monument lists the cause of the collapse: the lantern, the gear, and one witness who lied.",
+          "Every useful answer here is dangerous because you are stealing proof from a future that might stop existing."
         ],
         objective: "Steal knowledge from tomorrow and use it to repair yesterday.",
         choices: [
-          { label: "Read the monument inscription", hint: "+clue: lantern overcharged the gear", action: () => gain({ clue: "Lantern overcharged the tower gear", stat: ["Insight", 1], log: "The monument confirms the lantern was a power source, not a bomb." }) },
+          { label: "Read the monument inscription", hint: "+clue: lantern overcharged the gear", action: () => gain({ clue: "Lantern overcharged the tower gear", stat: ["Insight", 1], goal: "Visit the future", log: "The monument confirms the lantern was a power source, not a bomb." }) },
           { label: "Salvage a chronal fuse", hint: "+item, -ten stability", action: () => gain({ item: "Chronal Fuse", stability: -10, log: "You take a fuse from a machine that has not been invented yet." }) },
-          { label: "Study the survivor mural", hint: "+clue: Vale lied to protect the Guild", action: () => gain({ clue: "Vale lied to protect the Guild", relation: ["Archivist Vale", -1], log: "The mural shows Vale sealing Guild records after the blast." }) }
+          { label: "Study the survivor mural", hint: "+clue: Vale lied to protect the Guild", action: () => gain({ clue: "Vale lied to protect the Guild", relation: ["Archivist Vale", -1], log: "The mural shows Vale sealing Guild records after the blast." }) },
+          { label: "Recover the archive-wall gear", hint: "Requires hidden gear clue; proves persistence across timelines", require: () => has("clues", "Gear hidden in archive wall"), action: () => gain({ item: "Timeworn Gear", clue: "Objects can survive a changed branch", log: "The gear is still in the future wall, older than the timeline that hid it." }) }
         ]
       },
       towerGate: {
@@ -255,26 +283,31 @@
         period: "present",
         text: [
           "Inside the gate, gears grind in reverse. Each step ages the dust, then makes it young again.",
-          "A socket shaped like a lantern burns into the central mechanism. A fuse cradle sits empty below it."
+          "A socket shaped like a lantern burns into the central mechanism. A fuse cradle sits empty below it.",
+          "This is the lock: future knowledge, past intervention, present courage. Missing one turns the tower into a paradox engine."
         ],
         objective: "Use evidence from Past and Future to repair the clockheart.",
         choices: [
           { label: "Install the Blue Lantern blindly", hint: "Bad idea without the future clue", require: () => has("inventory", "Blue Lantern"), action: () => has("clues", "Lantern overcharged the tower gear") ? gain({ log: "You throttle the lantern instead of flooding it. The mechanism calms.", clue: "Lantern safely throttled" }) : end("Paradox Burn", "The lantern floods the clockheart. The tower becomes every midnight at once.") },
           { label: "Fit the Chronal Fuse", hint: "Requires future item", require: () => has("inventory", "Chronal Fuse"), action: () => gain({ log: "The future-made fuse bridges the impossible circuit.", clue: "Clockheart fused" }) },
           { label: "Confront Vale with the hidden truth", hint: "Requires Vale lie clue", require: () => has("clues", "Vale lied to protect the Guild"), action: () => gain({ relation: ["Archivist Vale", 2], clue: "Vale confession", log: "Vale admits the Guild tested the lantern under the tower." }) },
-          { label: "Seal the rift", hint: "Requires throttled lantern, fuse, and confession", require: () => has("clues", "Lantern safely throttled") && has("clues", "Clockheart fused") && has("clues", "Vale confession"), action: () => end("Chapter Complete", "The bells strike one clean note. The city remains wounded, but tomorrow is no longer a grave.") }
+          { label: "Seal the rift", hint: "Requires throttled lantern, fuse, confession, and a changed past", require: () => has("clues", "Lantern safely throttled") && has("clues", "Clockheart fused") && has("clues", "Vale confession") && completed("Change one past event"), action: () => end("Chapter Complete", "The bells strike one clean note. The city remains wounded, but tomorrow is no longer a grave.") }
         ]
       }
     };
 
     function has(bucket, value) { return state[bucket].includes(value); }
+    function completed(goal) { return state.goals.includes(`✓ ${goal}`); }
     function pushUnique(bucket, value) { if (value && !state[bucket].includes(value)) state[bucket].push(value); }
+    function completeGoal(goal) { state.goals = state.goals.map(x => x === goal ? `✓ ${goal}` : x); }
     function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
     function periodScene(period) { return period === "past" ? "pastMarket" : period === "future" ? "futureRuins" : state.scene === "towerGate" ? "towerGate" : "opening"; }
     function setScene(scene, log) { state.scene = scene; if (log) state.log.unshift(log); render(); }
     function gain(change) {
+      state.actions += 1;
       if (change.item) pushUnique("inventory", change.item);
       if (change.clue) pushUnique("clues", change.clue);
+      if (change.goal) completeGoal(change.goal);
       if (change.stat) state.stats[change.stat[0]] = clamp(state.stats[change.stat[0]] + change.stat[1], 0, 10);
       if (change.stability) state.stability = clamp(state.stability + change.stability, 0, 100);
       if (change.relation) state.relations[change.relation[0]] = clamp(state.relations[change.relation[0]] + change.relation[1], -3, 3);
@@ -286,8 +319,10 @@
       if (state.ending) return;
       state.period = period;
       state.scene = periodScene(period);
+      state.visits[period] += 1;
       state.stability = clamp(state.stability - (period === "present" ? 0 : 3), 0, 100);
       state.log.unshift(`Time jump: ${period.toUpperCase()}. The fracture takes its price.`);
+      if (period === "future") completeGoal("Visit the future");
       if (state.stability <= 0) return end("Timeline Collapse", "The jump tears the last thread of causality apart.");
       render();
     }
@@ -308,9 +343,17 @@
       document.getElementById("stats").innerHTML = Object.entries(state.stats).map(([name, value]) => `<div class="stat"><div class="stat-top"><span>${name}</span><strong>${value}/10</strong></div><div class="bar"><div class="fill" style="--value:${value * 10}%"></div></div></div>`).join("");
       document.getElementById("inventory").innerHTML = (state.inventory.length ? state.inventory : ["Empty"]).map(x => `<span class="tag">${x}</span>`).join("");
       document.getElementById("clues").innerHTML = (state.clues.length ? state.clues : ["No clues yet"]).map(x => `<span class="tag">${x}</span>`).join("");
+      document.getElementById("goals").innerHTML = state.goals.map(x => `<span class="tag">${x}</span>`).join("");
       document.getElementById("quest").innerHTML = state.quest.map(x => `<span class="tag">${x}</span>`).join("");
       document.getElementById("relations").innerHTML = Object.entries(state.relations).map(([name, value]) => `<div class="relation"><span>${name}</span><strong>${value > 0 ? "+" : ""}${value}</strong></div>`).join("");
       document.getElementById("log").innerHTML = state.log.slice(0, 10).map(x => `<div class="log-entry">${x}</div>`).join("");
+      document.getElementById("timelineMap").innerHTML = timelineNodes.map(node => `<button class="timeline-node ${node.period} ${state.period === node.period ? "active" : ""}" onclick="jump('${node.period}')"><strong>${node.title}</strong><span>${node.period.toUpperCase()} · visited ${state.visits[node.period]}x</span><small>${node.goal}</small></button>`).join("");
+      document.getElementById("proofStrip").innerHTML = [
+        ["Era", state.period],
+        ["Actions", state.actions],
+        ["Known clues", state.clues.length],
+        ["Outcome", state.ending ? state.ending.title : "In progress"]
+      ].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
       const ending = document.getElementById("ending");
       ending.hidden = !state.ending;
       ending.innerHTML = state.ending ? `<strong>${state.ending.title}</strong><p>${state.ending.text}</p>` : "";
