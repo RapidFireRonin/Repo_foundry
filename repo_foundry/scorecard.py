@@ -32,6 +32,8 @@ def build_scorecard(context: dict[str, Any]) -> dict[str, Any]:
     pr_status = context.get("pr_status", {})
     cycle = context.get("cycle", {})
     directions = context.get("directions", [])
+    agent_activity = context.get("agent_activity", {})
+    visual_evidence = context.get("visual_evidence", {})
 
     scores = dict(BASELINES)
     if health.get("overall_status") == "healthy":
@@ -49,6 +51,20 @@ def build_scorecard(context: dict[str, Any]) -> dict[str, Any]:
     if cycle.get("found"):
         scores["Logging and visibility"] += 1
         scores["Usefulness today"] += 1
+    if agent_activity.get("degraded"):
+        scores["Agent coordination"] -= 1
+        scores["Logging and visibility"] -= 1
+    elif agent_activity.get("quality_verdicts"):
+        scores["Agent coordination"] += 1
+        scores["Logging and visibility"] += 1
+        scores["Usefulness today"] += 1
+    if visual_evidence.get("items"):
+        scores["Actual UI control"] += 1
+        scores["Logging and visibility"] += 1
+        scores["Usefulness today"] += 1
+    else:
+        scores["Logging and visibility"] -= 2
+        scores["Usefulness today"] -= 1
     if context.get("token_warning", {}).get("detected"):
         scores["Safety"] -= 1
 
@@ -62,6 +78,10 @@ def build_scorecard(context: dict[str, Any]) -> dict[str, Any]:
             blockers.append("Some PR checks are failing.")
         if name == "Foundation" and health.get("failed_checks"):
             blockers.append(f"Local health warnings: {', '.join(health['failed_checks'][:4])}.")
+        if name in {"Logging and visibility", "Usefulness today"} and not visual_evidence.get("items"):
+            blockers.append("No visual proof screenshots are available yet.")
+        if name in {"Agent coordination", "Logging and visibility"} and agent_activity.get("degraded"):
+            blockers.append("Live GitHub activity collection is degraded.")
         metrics.append({
             "name": name,
             "score": score,
@@ -92,7 +112,7 @@ def _evidence(name: str, context: dict[str, Any]) -> list[str]:
     if name == "Shipping loop":
         return common + ["artifacts/pr-status/latest.json", str(context.get("shipper", {}).get("log_file") or "logs/repo-foundry-pr-shipper-*.log")]
     if name == "Logging and visibility":
-        return common + ["docs/agent-cycle-log.md", "logs/repo-foundry-pr-shipper-*.log"]
+        return common + ["docs/agent-cycle-log.md", "logs/repo-foundry-pr-shipper-*.log", "artifacts/visuals/"]
     if name == "Safety":
         return common + ["docs/security/automation-credential-hardening.md", "policies/auto-merge.yaml"]
     return common

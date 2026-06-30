@@ -5,6 +5,7 @@ import {
   Archive,
   CheckCircle2,
   CircleDot,
+  Eye,
   FileText,
   GitPullRequest,
   Hammer,
@@ -13,6 +14,7 @@ import {
   Send,
   RefreshCcw,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import "./styles.css";
 
@@ -155,6 +157,52 @@ type MissionControlState = {
     path: string | null;
     summary: string;
   };
+  agent_activity: {
+    degraded: boolean;
+    summary: string;
+    agent_lanes: Array<{
+      role: string;
+      status: string;
+      summary: string;
+      evidence: string[];
+      next_action: string;
+    }>;
+    quality_verdicts: Array<{
+      title: string;
+      status: string;
+      verdict: string;
+      evidence: Array<string | null>;
+      timestamp: string | null;
+    }>;
+    recent_runs: Array<Record<string, unknown>>;
+    recent_commits: Array<Record<string, unknown>>;
+  };
+  visual_evidence: {
+    summary: string;
+    next_action: string;
+    items: Array<{
+      title: string;
+      path: string;
+      url: string;
+      kind: string;
+      captured_at: string;
+      verdict: string;
+    }>;
+    expected: Array<{ title: string; path: string; purpose: string }>;
+  };
+  product_controls: {
+    active_goal_count: number;
+    active_goals: DirectionItem[];
+    suggested_builds: Array<{
+      title: string;
+      details: string;
+      priority: number;
+      why: string;
+      acceptance: string;
+    }>;
+    lowest_metrics: Array<{ name: string; score: number; status: string; next_action: string }>;
+    operator_prompt: string;
+  };
   project_guidance: {
     strategic_objective: string;
     next_best_deliverable: string;
@@ -234,6 +282,30 @@ const emptyMission: MissionControlState = {
   health: { overall_status: "unknown", summary: "Health not loaded.", failed_checks: [], checks: {} },
   token_warning: { detected: false, summary: "No token warning loaded.", guidance_path: "" },
   cycle: { found: false, timestamp: null, path: null, summary: "No cycle summary loaded." },
+  agent_activity: { degraded: false, summary: "No activity loaded.", agent_lanes: [], quality_verdicts: [], recent_runs: [], recent_commits: [] },
+  visual_evidence: { summary: "No visual proof loaded.", next_action: "", items: [], expected: [] },
+  product_controls: {
+    active_goal_count: 0,
+    active_goals: [],
+    suggested_builds: [
+      {
+        title: "Build the product Garrett describes",
+        details: "Turn Garrett's product idea into an agent direction with PRs, checks, artifacts, and visible progress.",
+        priority: 95,
+        why: "This is the main human control path.",
+        acceptance: "A product direction appears in the queue and progress is visible in Mission Control.",
+      },
+      {
+        title: "Improve agent visibility",
+        details: "Show what each agent is doing, whether it is good, and the evidence behind the verdict.",
+        priority: 92,
+        why: "Garrett currently feels blind.",
+        acceptance: "Agent lanes, quality verdicts, logs, PRs, and visual proof are visible without raw log digging.",
+      },
+    ],
+    lowest_metrics: [],
+    operator_prompt: "What product should the agents build next?",
+  },
   project_guidance: {
     strategic_objective: "",
     next_best_deliverable: "",
@@ -401,6 +473,24 @@ function DirectionComposer({ onCreated }: { onCreated: () => Promise<void> }) {
   );
 }
 
+async function createDirectionFromSuggestion(
+  suggestion: { title: string; details: string; priority: number; acceptance?: string },
+  refresh: () => Promise<void>,
+) {
+  await fetch(`${apiBase}/api/directions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: suggestion.title,
+      desired_outcome: suggestion.acceptance ?? suggestion.title,
+      details: suggestion.details,
+      priority: suggestion.priority,
+      scope: "global",
+    }),
+  });
+  await refresh();
+}
+
 function DirectionQueue({
   items,
   onStatusChange,
@@ -539,6 +629,49 @@ function ExecutiveStrip({ mission }: { mission: MissionControlState }) {
   );
 }
 
+function BuildConsole({
+  controls,
+  onBuild,
+}: {
+  controls: MissionControlState["product_controls"];
+  onBuild: (suggestion: { title: string; details: string; priority: number; acceptance?: string }) => Promise<void>;
+}) {
+  return (
+    <section className="build-console">
+      <div className="build-console-main">
+        <span className="eyebrow">Build Console</span>
+        <h2>{controls.operator_prompt}</h2>
+        <p>Choose a deliverable and Repo Foundry will add it to the agent direction queue. Progress, PRs, checks, logs, and proof should appear back here.</p>
+      </div>
+      <div className="build-suggestions">
+        {controls.suggested_builds.map((item) => (
+          <article className="build-card" key={item.title}>
+            <div>
+              <strong>{item.title}</strong>
+              <span>{item.why}</span>
+              <small>Acceptance: {item.acceptance}</small>
+            </div>
+            <button type="button" onClick={() => onBuild(item)}>
+              <Send size={15} />
+              Build this
+            </button>
+          </article>
+        ))}
+      </div>
+      <div className="control-bottom">
+        <div>
+          <span>Active goals</span>
+          <strong>{controls.active_goal_count}</strong>
+        </div>
+        <div>
+          <span>Lowest metrics</span>
+          <strong>{controls.lowest_metrics.map((metric) => `${metric.name} ${metric.score}/10`).join(" · ") || "None"}</strong>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ScorecardPanel({ scorecard }: { scorecard: MissionControlState["scorecard"] }) {
   return (
     <div className="scorecard-grid">
@@ -572,6 +705,79 @@ function WhatChangedPanel({ items }: { items: MissionControlState["changes"] }) 
           <code>{item.type}</code>
         </article>
       ))}
+    </div>
+  );
+}
+
+function AgentActivityPanel({ activity }: { activity: MissionControlState["agent_activity"] }) {
+  return (
+    <div className="agent-lanes">
+      <div className="operator-verdict">
+        <strong>{activity.summary}</strong>
+        <code>{activity.degraded ? "degraded" : "live"}</code>
+      </div>
+      {activity.agent_lanes.map((lane) => (
+        <article className="agent-lane" key={lane.role}>
+          <div>
+            <strong>{lane.role}</strong>
+            <span>{lane.summary}</span>
+            <small>Next: {lane.next_action}</small>
+            {lane.evidence.length ? <small>Evidence: {lane.evidence.join(" · ")}</small> : null}
+          </div>
+          <code>{lane.status}</code>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function QualityVerdictsPanel({ activity }: { activity: MissionControlState["agent_activity"] }) {
+  const visible = activity.quality_verdicts.slice(0, 8);
+  return (
+    <div className="quality-list">
+      {visible.length ? visible.map((item, index) => (
+        <article className="quality-row" key={`${item.title}-${index}`}>
+          <div>
+            <strong>{item.title}</strong>
+            <span>{item.verdict}</span>
+            <small>{item.timestamp ?? "No timestamp"} · {(item.evidence.filter(Boolean) as string[]).join(" · ") || "No link"}</small>
+          </div>
+          <code>{item.status}</code>
+        </article>
+      )) : <div className="empty-panel">No quality verdicts yet. Run the next agent cycle or GitHub check collection.</div>}
+    </div>
+  );
+}
+
+function VisualEvidencePanel({ evidence }: { evidence: MissionControlState["visual_evidence"] }) {
+  return (
+    <div className="visual-proof">
+      <div className="operator-verdict">
+        <strong>{evidence.summary}</strong>
+        <code>{evidence.items.length ? "proof" : "missing"}</code>
+      </div>
+      {evidence.items.length ? (
+        <div className="visual-grid">
+          {evidence.items.map((item) => (
+            <figure className="visual-card" key={item.path}>
+              <img src={`${apiBase}${item.url}`} alt={item.title} />
+              <figcaption>
+                <strong>{item.title}</strong>
+                <span>{item.verdict}</span>
+                <small>{item.captured_at} · {item.path}</small>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : (
+        <div className="visual-empty">
+          <strong>No screenshot proof yet.</strong>
+          <span>{evidence.next_action}</span>
+          {evidence.expected.map((item) => (
+            <small key={item.path}>{item.title}: {item.path} · {item.purpose}</small>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -676,6 +882,10 @@ function App() {
     await refresh();
   }
 
+  async function buildSuggestedDirection(suggestion: { title: string; details: string; priority: number; acceptance?: string }) {
+    await createDirectionFromSuggestion(suggestion, refresh);
+  }
+
   useEffect(() => {
     refresh().catch(() => setLoading(false));
   }, []);
@@ -723,6 +933,8 @@ function App() {
 
         <ExecutiveStrip mission={mission} />
 
+        <BuildConsole controls={mission.product_controls} onBuild={buildSuggestedDirection} />
+
         <div className="metrics">
           {counts.map(([label, value]) => (
             <div className="metric" key={label}>
@@ -738,6 +950,15 @@ function App() {
           </Panel>
           <Panel title="What Changed" icon={<History size={18} />}>
             <WhatChangedPanel items={mission.changes} />
+          </Panel>
+          <Panel title="Agent Activity Lanes" icon={<Sparkles size={18} />}>
+            <AgentActivityPanel activity={mission.agent_activity} />
+          </Panel>
+          <Panel title="Visual Proof" icon={<Eye size={18} />}>
+            <VisualEvidencePanel evidence={mission.visual_evidence} />
+          </Panel>
+          <Panel title="Quality Verdicts" icon={<CheckCircle2 size={18} />}>
+            <QualityVerdictsPanel activity={mission.agent_activity} />
           </Panel>
           <Panel title="Local PR Shipper" icon={<Hammer size={18} />}>
             <ShipperPanel shipper={mission.shipper} />

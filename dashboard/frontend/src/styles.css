@@ -164,6 +164,75 @@ h1 {
   gap: 16px;
 }
 
+.build-console {
+  background: #ffffff;
+  border: 1px solid #dbe2e8;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.build-console-main p {
+  color: #607080;
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.build-suggestions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.build-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.build-card strong,
+.control-bottom strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.build-card span,
+.build-card small,
+.control-bottom span {
+  display: block;
+  color: #607080;
+  font-size: 12px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.build-card button {
+  justify-content: center;
+  min-height: 42px;
+  background: #0e8f86;
+  border-color: #0e8f86;
+  color: #ffffff;
+}
+
+.control-bottom {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.control-bottom > div {
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcfd;
+}
+
 .mission-hero.attention-needed {
   border-left-color: #d18100;
 }
@@ -224,7 +293,10 @@ h1 {
 .change-list,
 .operator-panel,
 .health-grid,
-.guidance {
+.guidance,
+.agent-lanes,
+.quality-list,
+.visual-proof {
   display: grid;
   gap: 10px;
   padding: 14px;
@@ -237,7 +309,10 @@ h1 {
 .scorecard-card,
 .change-row,
 .health-check,
-.safety-card {
+.safety-card,
+.agent-lane,
+.quality-row,
+.visual-empty {
   background: #fbfcfd;
   border: 1px solid #e3e9ee;
   border-radius: 8px;
@@ -259,7 +334,9 @@ h1 {
 
 .scorecard-top,
 .operator-verdict,
-.change-row {
+.change-row,
+.agent-lane,
+.quality-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -285,7 +362,11 @@ h1 {
 .operator-panel small,
 .health-check small,
 .safety-card small,
-.guidance small {
+.guidance small,
+.agent-lane small,
+.quality-row small,
+.visual-empty small,
+.visual-card small {
   display: block;
   color: #607080;
   margin-top: 6px;
@@ -294,11 +375,48 @@ h1 {
 }
 
 .change-row span,
-.safety-card span {
+.safety-card span,
+.agent-lane span,
+.quality-row span,
+.visual-empty span,
+.visual-card span {
   display: block;
   color: #607080;
   font-size: 12px;
   margin-top: 4px;
+}
+
+.visual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.visual-card {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.visual-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top center;
+  border-bottom: 1px solid #e3e9ee;
+}
+
+.visual-card figcaption {
+  padding: 10px;
+}
+
+.visual-card strong,
+.visual-empty strong {
+  display: block;
+  font-size: 14px;
 }
 
 .mini-grid {
@@ -712,7 +830,9 @@ pre {
   }
 
   .mission-strip,
-  .scorecard-grid {
+  .scorecard-grid,
+  .build-suggestions,
+  .visual-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -769,6 +889,9 @@ pre {
 
   .mission-strip,
   .scorecard-grid,
+  .build-suggestions,
+  .control-bottom,
+  .visual-grid,
   .mini-grid,
   .health-grid,
   .guidance-target {
@@ -776,11 +899,15 @@ pre {
   }
 
   .mission-hero,
+  .build-console,
   .scorecard-grid,
   .change-list,
   .operator-panel,
   .health-grid,
-  .guidance {
+  .guidance,
+  .agent-lanes,
+  .quality-list,
+  .visual-proof {
     padding: 12px;
   }
 
