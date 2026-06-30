@@ -47,6 +47,7 @@ python -m repo_foundry.reconcile apply blueprints/example-repo.yaml --registry r
 python -m repo_foundry.reconcile apply blueprints/example-repo.yaml --registry registry/repos.yaml --execute
 python -m repo_foundry.directions add "Polish dashboard" "Make the local control plane easier to read" --priority 90
 python -m repo_foundry.pr_monitor RapidFireRonin/Repo_foundry
+python -m repo_foundry.pr_monitor RapidFireRonin/Repo_foundry --write-snapshots artifacts/pr-status
 python -m repo_foundry.merge_executor RapidFireRonin/Repo_foundry 12
 python -m repo_foundry.cycle_summary append --from-sample
 python -m repo_foundry.api
