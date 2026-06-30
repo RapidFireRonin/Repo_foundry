@@ -9,6 +9,7 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from repo_foundry.cycle_summary import append_summary, sample_summary
@@ -20,6 +21,7 @@ from repo_foundry.models import DashboardState, repo_root
 from repo_foundry.pr_status import collect_pr_status, write_pr_status_artifacts
 from repo_foundry.reconcile import build_plan, load_registry
 from repo_foundry.shipper_logs import latest_shipper_status
+from repo_foundry.visual_evidence import collect_visual_evidence
 
 
 app = FastAPI(title="Repo Foundry API", version="0.1.0")
@@ -38,6 +40,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.mount("/artifacts", StaticFiles(directory=str(repo_root() / "artifacts"), check_dir=False), name="artifacts")
 
 
 class DirectionCreateRequest(BaseModel):
@@ -87,6 +90,11 @@ def shipper_status() -> dict:
 def changes() -> dict:
     mission = build_mission_control()
     return {"changes": mission["changes"]}
+
+
+@app.get("/api/visual-evidence")
+def visual_evidence() -> dict:
+    return collect_visual_evidence()
 
 
 @app.get("/api/directions")
