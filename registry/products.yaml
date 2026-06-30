@@ -18,7 +18,7 @@ products:
     title: Chrono Rift
     status: playable
     kind: game
-    description: Playable browser RPG slice with era jumping, timeline proof, future-gated puzzle logic, and save/load/restart controls.
+    description: Playable browser RPG slice with era jumping, timeline proof, future-gated puzzle logic, visible playtest guide, and save/load/restart controls.
     launch_url: /chrono-rift.html
     repo_url: https://github.com/RapidFireRonin/Repo_foundry
     visual_proof: /artifacts/visuals/chrono-rift-gallery.png
@@ -26,6 +26,7 @@ products:
       - "PR #31 checks passed before merge."
       - Browser smoke opens /chrono-rift.html locally.
       - Gameplay flow supports jumping between Past, Present, and Future.
-    quality: Playable local slice; continue expanding content and automated playtest coverage.
-    next_action: Add automated browser playtest coverage for the critical future-knowledge to past-solution loop.
+      - "Playwright coverage added for Future clue -> Past solution -> Present seal critical loop."
+    quality: Playable local slice with visible proof steps for the core time-travel mechanic; continue expanding content and combat/encounter systems.
+    next_action: Add the next playable chapter slice with an encounter/combat system and timeline consequences.
     last_verified: "2026-06-30"
