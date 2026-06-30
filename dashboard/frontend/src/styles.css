@@ -174,6 +174,66 @@ h1 {
   gap: 14px;
 }
 
+.phone-access {
+  background: #ffffff;
+  border: 1px solid #dbe2e8;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.phone-access h2 {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+.phone-access p {
+  color: #607080;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 8px;
+}
+
+.phone-url-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.phone-url-card {
+  display: block;
+  text-decoration: none;
+  color: #18212b;
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 12px;
+  min-width: 0;
+}
+
+.phone-url-card span,
+.phone-url-card small {
+  display: block;
+  color: #607080;
+  font-size: 12px;
+}
+
+.phone-url-card span {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.phone-url-card strong {
+  display: block;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
 .build-console-main p {
   color: #607080;
   font-size: 13px;
@@ -296,7 +356,8 @@ h1 {
 .guidance,
 .agent-lanes,
 .quality-list,
-.visual-proof {
+.visual-proof,
+.product-showcase {
   display: grid;
   gap: 10px;
   padding: 14px;
@@ -417,6 +478,69 @@ h1 {
 .visual-empty strong {
   display: block;
   font-size: 14px;
+}
+
+.product-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.product-card {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 12px;
+  min-width: 0;
+}
+
+.product-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: top center;
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+}
+
+.product-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.product-card strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.product-card span,
+.product-card small,
+.next-product-goal {
+  display: block;
+  color: #607080;
+  font-size: 12px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.inline-link {
+  display: inline-flex;
+  margin-top: 8px;
+  color: #0e6f68;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.next-product-goal {
+  border: 1px solid #e3e9ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 12px;
+  margin-top: 0;
 }
 
 .mini-grid {
@@ -825,13 +949,15 @@ pre {
   .metrics,
   .grid,
   .wide-grid,
-  .mission-grid {
+  .mission-grid,
+  .phone-access {
     grid-template-columns: 1fr;
   }
 
   .mission-strip,
   .scorecard-grid,
   .build-suggestions,
+  .phone-url-grid,
   .visual-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -890,8 +1016,10 @@ pre {
   .mission-strip,
   .scorecard-grid,
   .build-suggestions,
+  .phone-url-grid,
   .control-bottom,
   .visual-grid,
+  .product-card,
   .mini-grid,
   .health-grid,
   .guidance-target {
@@ -899,6 +1027,7 @@ pre {
   }
 
   .mission-hero,
+  .phone-access,
   .build-console,
   .scorecard-grid,
   .change-list,
@@ -907,7 +1036,8 @@ pre {
   .guidance,
   .agent-lanes,
   .quality-list,
-  .visual-proof {
+  .visual-proof,
+  .product-showcase {
     padding: 12px;
   }
 

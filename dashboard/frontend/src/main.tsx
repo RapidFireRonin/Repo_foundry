@@ -11,6 +11,7 @@ import {
   Hammer,
   History,
   ListChecks,
+  MonitorSmartphone,
   Send,
   RefreshCcw,
   ShieldCheck,
@@ -190,6 +191,34 @@ type MissionControlState = {
     }>;
     expected: Array<{ title: string; path: string; purpose: string }>;
   };
+  operator_access: {
+    generated_at: string;
+    frontend_port: number;
+    api_port: number;
+    lan_ip: string;
+    tailscale_ip: string | null;
+    primary_phone_url: string;
+    api_url: string;
+    launch_command: string;
+    status: string;
+    note: string;
+    urls: Array<{ label: string; url: string; network: string; use_for: string }>;
+  };
+  product_showcase: {
+    generated_at: string;
+    summary: string;
+    next_product_goal: string;
+    products: Array<{
+      title: string;
+      status: string;
+      what_was_built: string;
+      open_url: string | null;
+      visual_proof: string | null;
+      test_evidence: string[];
+      quality: string;
+      next_action: string;
+    }>;
+  };
   product_controls: {
     active_goal_count: number;
     active_goals: DirectionItem[];
@@ -284,6 +313,25 @@ const emptyMission: MissionControlState = {
   cycle: { found: false, timestamp: null, path: null, summary: "No cycle summary loaded." },
   agent_activity: { degraded: false, summary: "No activity loaded.", agent_lanes: [], quality_verdicts: [], recent_runs: [], recent_commits: [] },
   visual_evidence: { summary: "No visual proof loaded.", next_action: "", items: [], expected: [] },
+  operator_access: {
+    generated_at: "",
+    frontend_port: 5274,
+    api_port: 8765,
+    lan_ip: "127.0.0.1",
+    tailscale_ip: null,
+    primary_phone_url: "http://127.0.0.1:5274",
+    api_url: "http://127.0.0.1:8765",
+    launch_command: ".\\scripts\\rf.ps1 phone",
+    status: "loading",
+    note: "Loading phone access.",
+    urls: [],
+  },
+  product_showcase: {
+    generated_at: "",
+    summary: "Loading product proof.",
+    next_product_goal: "Add a product direction.",
+    products: [],
+  },
   product_controls: {
     active_goal_count: 0,
     active_goals: [],
@@ -325,6 +373,59 @@ const apiBase =
 function StatusDot({ status }: { status: string }) {
   const tone = status.includes("blocked") || status.includes("failed") ? "bad" : status.includes("review") || status.includes("draft") ? "warn" : "good";
   return <span className={`status-dot ${tone}`} aria-label={status} />;
+}
+
+function PhoneAccessPanel({ access }: { access: MissionControlState["operator_access"] }) {
+  const urls = access.urls.length ? access.urls : [{ label: "This device", url: access.primary_phone_url, network: "local", use_for: "Open Mission Control." }];
+  return (
+    <section className="phone-access">
+      <div>
+        <span className="eyebrow">Open From iPhone</span>
+        <h2>{access.primary_phone_url}</h2>
+        <p>{access.note}</p>
+        <pre className="command-snippet">{access.launch_command}</pre>
+      </div>
+      <div className="phone-url-grid">
+        {urls.map((item) => (
+          <a className="phone-url-card" href={item.url} target="_blank" rel="noreferrer" key={`${item.network}-${item.url}`}>
+            <span>{item.label}</span>
+            <strong>{item.url}</strong>
+            <small>{item.use_for}</small>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProductShowcasePanel({ showcase }: { showcase: MissionControlState["product_showcase"] }) {
+  return (
+    <div className="product-showcase">
+      <div className="operator-verdict">
+        <strong>{showcase.summary}</strong>
+        <code>proof-led</code>
+      </div>
+      <div className="product-grid">
+        {showcase.products.length ? showcase.products.map((product) => (
+          <article className="product-card" key={product.title}>
+            {product.visual_proof ? <img src={`${apiBase}${product.visual_proof}`} alt={`${product.title} proof`} /> : null}
+            <div>
+              <div className="product-card-top">
+                <strong>{product.title}</strong>
+                <code>{product.status}</code>
+              </div>
+              <span>{product.what_was_built}</span>
+              <small>Quality: {product.quality}</small>
+              <small>Tests: {product.test_evidence.slice(0, 2).join(" · ")}</small>
+              <small>Next: {product.next_action}</small>
+              {product.open_url ? <a className="inline-link" href={product.open_url}>Open</a> : null}
+            </div>
+          </article>
+        )) : <div className="empty-panel">No product cards yet. Add a direction and let the next cycle attach tests, PRs, and screenshots.</div>}
+      </div>
+      <div className="next-product-goal">{showcase.next_product_goal}</div>
+    </div>
+  );
 }
 
 function Panel({
@@ -933,6 +1034,8 @@ function App() {
 
         <ExecutiveStrip mission={mission} />
 
+        <PhoneAccessPanel access={mission.operator_access} />
+
         <BuildConsole controls={mission.product_controls} onBuild={buildSuggestedDirection} />
 
         <div className="metrics">
@@ -956,6 +1059,9 @@ function App() {
           </Panel>
           <Panel title="Visual Proof" icon={<Eye size={18} />}>
             <VisualEvidencePanel evidence={mission.visual_evidence} />
+          </Panel>
+          <Panel title="Products Created" icon={<MonitorSmartphone size={18} />} className="panel-products">
+            <ProductShowcasePanel showcase={mission.product_showcase} />
           </Panel>
           <Panel title="Quality Verdicts" icon={<CheckCircle2 size={18} />}>
             <QualityVerdictsPanel activity={mission.agent_activity} />

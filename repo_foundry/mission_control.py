@@ -8,7 +8,9 @@ from repo_foundry.agent_activity import collect_agent_activity
 from repo_foundry.cycle_logs import latest_cycle_summary
 from repo_foundry.health import collect_health
 from repo_foundry.models import repo_root
+from repo_foundry.operator_access import collect_operator_access
 from repo_foundry.pr_status import collect_pr_status
+from repo_foundry.product_showcase import build_product_showcase
 from repo_foundry.reconcile import load_registry
 from repo_foundry.scorecard import build_scorecard
 from repo_foundry.shipper_logs import latest_shipper_status
@@ -163,6 +165,14 @@ def build_mission_control(root: Path | None = None) -> dict[str, Any]:
     cycle = latest_cycle_summary(base)
     agent_activity = collect_agent_activity(cycle=cycle)
     visual_evidence = collect_visual_evidence(base)
+    operator_access = collect_operator_access()
+    product_showcase = build_product_showcase(
+        visual_evidence=visual_evidence,
+        agent_activity=agent_activity,
+        health=health,
+        shipper=shipper,
+        pr_status=pr_status,
+    )
     token_warning = token_warning_from_environment()
     directions = [item.model_dump(mode="json") for item in registry.directions]
     context = {
@@ -174,6 +184,8 @@ def build_mission_control(root: Path | None = None) -> dict[str, Any]:
         "token_warning": token_warning,
         "agent_activity": agent_activity,
         "visual_evidence": visual_evidence,
+        "operator_access": operator_access,
+        "product_showcase": product_showcase,
     }
     scorecard = build_scorecard(context)
     failed_checks = pr_status.get("failed_check_count", 0)
@@ -209,6 +221,8 @@ def build_mission_control(root: Path | None = None) -> dict[str, Any]:
         "cycle": cycle,
         "agent_activity": agent_activity,
         "visual_evidence": visual_evidence,
+        "operator_access": operator_access,
+        "product_showcase": product_showcase,
         "token_warning": token_warning,
         "project_guidance": project_guidance(pr_status, scorecard),
         "product_controls": product_controls(scorecard, directions, visual_evidence),
