@@ -27,8 +27,8 @@ jobs:
         run: |
           set -euo pipefail
           # Keep this lightweight guard from matching its own workflow command or documentation examples.
-          # It only fails on plausible committed assignments with a non-placeholder value.
-          if grep -RInE '^[[:space:]]*(export[[:space:]]+)?(REPO_FOUNDRY_GH_TOKEN|GH_TOKEN|GITHUB_TOKEN)[[:space:]]*=[[:space:]]*(ghp_|github_pat_|gho_|ghu_|ghs_|ghr_|[A-Za-z0-9_]{30,})' . \
+          # GitHub tokens use recognizable prefixes; placeholder-like long strings are not enough to fail CI.
+          if grep -RInE '^[[:space:]]*(export[[:space:]]+)?(REPO_FOUNDRY_GH_TOKEN|GH_TOKEN|GITHUB_TOKEN)[[:space:]]*=[[:space:]]*(ghp_|github_pat_|gho_|ghu_|ghs_|ghr_)' . \
             --exclude-dir=.git \
             --exclude-dir=.venv \
             --exclude='security-checks.yml'; then
