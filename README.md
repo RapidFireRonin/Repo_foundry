@@ -36,6 +36,8 @@ Backend: `http://127.0.0.1:8765`
 
 Frontend: `http://127.0.0.1:5274`
 
+For iPhone access, see [docs/iphone-dashboard.md](docs/iphone-dashboard.md).
+
 ## Common Tasks
 
 ```powershell
@@ -44,6 +46,8 @@ python -m repo_foundry.reconcile plan blueprints/example-repo.yaml --registry re
 python -m repo_foundry.reconcile apply blueprints/example-repo.yaml --registry registry/repos.yaml
 python -m repo_foundry.reconcile apply blueprints/example-repo.yaml --registry registry/repos.yaml --execute
 python -m repo_foundry.directions add "Polish dashboard" "Make the local control plane easier to read" --priority 90
+python -m repo_foundry.pr_monitor RapidFireRonin/Repo_foundry
+python -m repo_foundry.merge_executor RapidFireRonin/Repo_foundry 12
 python -m repo_foundry.cycle_summary append --from-sample
 python -m repo_foundry.api
 ```

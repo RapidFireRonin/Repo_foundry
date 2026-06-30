@@ -1,0 +1,31 @@
+allowed_branches:
+  - "repo-foundry/*"
+  - "codex/*"
+  - "agent/*"
+  - "builder/*"
+  - "reviewer/*"
+  - "scout/*"
+  - "fix/*"
+required_checks:
+  - "test"
+  - "quality"
+  - "secret-scan"
+max_changed_files: 25
+max_additions: 1200
+max_deletions: 600
+blocked_paths:
+  - ".env"
+  - ".env.*"
+  - "**/*secret*"
+  - "**/*credential*"
+  - ".github/workflows/self-hosted-runner-safety.yml"
+dangerous_operations:
+  - "force-push"
+  - "delete-repo"
+  - "delete-branch-protection"
+  - "write-secret"
+  - "remove-audit-log"
+require_clean_mergeable: true
+require_no_failing_checks: true
+require_audit_entry_before_merge: true
+stale_after_hours: 48

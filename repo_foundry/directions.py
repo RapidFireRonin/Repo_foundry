@@ -41,6 +41,20 @@ def add_direction(
     return item
 
 
+def mark_matching_direction_done(pr_title: str, registry_path: str | Path = "registry/repos.yaml") -> str | None:
+    path = Path(registry_path)
+    registry = load_registry(path)
+    for item in registry.directions:
+        if item.status == "active" and (
+            item.title.lower() in pr_title.lower() or pr_title.lower() in item.title.lower()
+        ):
+            item.status = "done"
+            path.write_text(yaml.safe_dump(registry.model_dump(mode="json"), sort_keys=False), encoding="utf-8")
+            write_audit_event("direction_done", item.title, source="completion_loop", pr_title=pr_title)
+            return item.title
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Manage human direction for autonomous agents.")
     sub = parser.add_subparsers(dest="command", required=True)
