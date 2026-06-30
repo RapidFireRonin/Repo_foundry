@@ -507,7 +507,7 @@ function Timeline({ items }: { items: Item[] }) {
   );
 }
 
-function DirectionComposer({ onCreated }: { onCreated: () => Promise<void> }) {
+function DirectionComposer({ onCreated, compact = false }: { onCreated: () => Promise<void>; compact?: boolean }) {
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
   const [priority, setPriority] = useState(80);
@@ -537,14 +537,14 @@ function DirectionComposer({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <form className="direction-composer" onSubmit={submit}>
+    <form className={`direction-composer ${compact ? "compact" : ""}`} onSubmit={submit}>
       <label>
         <span>Goal</span>
         <textarea
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="Build X, focus on GitHub adapter, improve dashboard..."
-          rows={3}
+          placeholder="Build a browser tools repo, make a habit tracker app, create a landing page for my product..."
+          rows={compact ? 4 : 3}
         />
       </label>
       <label>
@@ -733,16 +733,29 @@ function ExecutiveStrip({ mission }: { mission: MissionControlState }) {
 function BuildConsole({
   controls,
   onBuild,
+  onCreated,
 }: {
   controls: MissionControlState["product_controls"];
   onBuild: (suggestion: { title: string; details: string; priority: number; acceptance?: string }) => Promise<void>;
+  onCreated: () => Promise<void>;
 }) {
   return (
     <section className="build-console">
       <div className="build-console-main">
         <span className="eyebrow">Build Console</span>
         <h2>{controls.operator_prompt}</h2>
-        <p>Choose a deliverable and Repo Foundry will add it to the agent direction queue. Progress, PRs, checks, logs, and proof should appear back here.</p>
+        <p>Describe any product, app, repo, tool, or improvement. Repo Foundry turns it into an active agent goal and tracks progress, PRs, checks, logs, and proof here.</p>
+      </div>
+      <div className="build-custom-goal">
+        <div>
+          <strong>Describe what you want built</strong>
+          <span>Use plain language. The agents will treat this as the goal.</span>
+        </div>
+        <DirectionComposer onCreated={onCreated} compact />
+      </div>
+      <div className="build-shortcuts-head">
+        <span>Quick starts</span>
+        <small>Optional shortcuts. You can ignore these and type your own goal above.</small>
       </div>
       <div className="build-suggestions">
         {controls.suggested_builds.map((item) => (
@@ -1036,7 +1049,7 @@ function App() {
 
         <PhoneAccessPanel access={mission.operator_access} />
 
-        <BuildConsole controls={mission.product_controls} onBuild={buildSuggestedDirection} />
+        <BuildConsole controls={mission.product_controls} onBuild={buildSuggestedDirection} onCreated={refresh} />
 
         <div className="metrics">
           {counts.map(([label, value]) => (
