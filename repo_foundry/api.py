@@ -13,9 +13,13 @@ from pydantic import BaseModel, Field
 
 from repo_foundry.cycle_summary import append_summary, sample_summary
 from repo_foundry.db import fetch_completion_prs, fetch_dashboard_items, init_db
-from repo_foundry.directions import add_direction, update_direction_status
+from repo_foundry.directions import add_direction, list_directions, update_direction_status
+from repo_foundry.health import collect_health
+from repo_foundry.mission_control import build_mission_control
 from repo_foundry.models import DashboardState, repo_root
+from repo_foundry.pr_status import collect_pr_status, write_pr_status_artifacts
 from repo_foundry.reconcile import build_plan, load_registry
+from repo_foundry.shipper_logs import latest_shipper_status
 
 
 app = FastAPI(title="Repo Foundry API", version="0.1.0")
@@ -57,6 +61,44 @@ def startup() -> None:
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/health/local")
+def local_health() -> dict:
+    return collect_health()
+
+
+@app.get("/api/mission-control")
+def mission_control() -> dict:
+    return build_mission_control()
+
+
+@app.get("/api/scorecard")
+def scorecard() -> dict:
+    return build_mission_control()["scorecard"]
+
+
+@app.get("/api/shipper/status")
+def shipper_status() -> dict:
+    return latest_shipper_status()
+
+
+@app.get("/api/changes")
+def changes() -> dict:
+    mission = build_mission_control()
+    return {"changes": mission["changes"]}
+
+
+@app.get("/api/directions")
+def directions() -> list[dict]:
+    return [item.model_dump(mode="json") for item in list_directions(repo_root() / "registry" / "repos.yaml")]
+
+
+@app.get("/api/pr-status")
+def pr_status() -> dict:
+    snapshot = collect_pr_status()
+    snapshot["artifacts"] = write_pr_status_artifacts(snapshot)
+    return snapshot
 
 
 @app.get("/api/dashboard", response_model=DashboardState)
