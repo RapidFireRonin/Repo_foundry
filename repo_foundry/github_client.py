@@ -13,12 +13,23 @@ class GitHubCliUnavailable(RuntimeError):
     pass
 
 
+class GitHubAuthUnavailable(RuntimeError):
+    pass
+
+
 @dataclass(frozen=True)
 class CommandResult:
     command: list[str]
     returncode: int
     stdout: str
     stderr: str
+
+
+@dataclass(frozen=True)
+class GitHubCredentialStatus:
+    available: bool
+    method: str
+    message: str
 
 
 class GitUnavailable(RuntimeError):
@@ -42,10 +53,41 @@ def git_path() -> str:
 
 
 def gh_path() -> str:
+    configured = os.environ.get("REPO_FOUNDRY_GH")
+    if configured:
+        return configured
     path = shutil.which("gh")
     if not path:
         raise GitHubCliUnavailable("GitHub CLI `gh` was not found on PATH.")
     return path
+
+
+def token_env_status(environ: dict[str, str] | None = None) -> GitHubCredentialStatus | None:
+    env = environ if environ is not None else os.environ
+    for name in ("REPO_FOUNDRY_GH_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"):
+        if env.get(name):
+            return GitHubCredentialStatus(True, name, f"GitHub token available from `{name}`.")
+    return None
+
+
+def github_credential_status() -> GitHubCredentialStatus:
+    token_status = token_env_status()
+    if token_status:
+        return token_status
+
+    gh = gh_path()
+    completed = subprocess.run([gh, "auth", "status"], capture_output=True, text=True, check=False)
+    if completed.returncode == 0:
+        return GitHubCredentialStatus(True, "gh-auth", "GitHub CLI has an authenticated account.")
+    message = completed.stderr.strip() or completed.stdout.strip() or "GitHub CLI is not authenticated."
+    return GitHubCredentialStatus(False, "missing", message)
+
+
+def require_github_credentials() -> GitHubCredentialStatus:
+    status = github_credential_status()
+    if not status.available:
+        raise GitHubAuthUnavailable(status.message)
+    return status
 
 
 def run_gh(args: list[str], input_text: str | None = None) -> CommandResult:
