@@ -14,6 +14,7 @@ body {
   margin: 0;
   min-width: 320px;
   background: #f6f8fa;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 button {
@@ -492,10 +493,11 @@ pre {
 
   .sidebar {
     position: static;
+    padding: 18px;
   }
 
   nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .metrics,
@@ -511,9 +513,41 @@ pre {
   .content {
     padding: 18px;
   }
+
+  .panel-direct {
+    order: -4;
+  }
+
+  .panel-completion {
+    order: -3;
+  }
+
+  .panel-directions {
+    order: -2;
+  }
 }
 
 @media (max-width: 560px) {
+  .sidebar {
+    border-bottom: 1px solid #314353;
+  }
+
+  .brand {
+    margin-bottom: 18px;
+  }
+
+  nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  nav a {
+    min-height: 42px;
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
   .topbar,
   .row {
     flex-direction: column;
@@ -521,5 +555,35 @@ pre {
 
   .metrics {
     gap: 10px;
+  }
+
+  .metric {
+    padding: 14px;
+  }
+
+  .panel-head,
+  .row,
+  .direction-composer,
+  .completion-panel,
+  .review-list,
+  .timeline,
+  .direction-list {
+    padding: 12px;
+  }
+
+  .composer-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .completion-next,
+  .completion-row,
+  .direction-item,
+  .review-item,
+  .timeline-row {
+    border-radius: 8px;
+  }
+
+  pre {
+    max-height: 300px;
   }
 }

@@ -36,6 +36,8 @@ Backend: `http://127.0.0.1:8765`
 
 Frontend: `http://127.0.0.1:5274`
 
+For iPhone access, see [docs/iphone-dashboard.md](docs/iphone-dashboard.md).
+
 ## Common Tasks
 
 ```powershell

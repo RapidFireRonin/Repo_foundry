@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import os
 from pathlib import Path
 
 import uvicorn
@@ -26,6 +27,7 @@ app.add_middleware(
         "http://127.0.0.1:5274",
         "http://localhost:5274",
     ],
+    allow_origin_regex=r"https?://.*:(5173|5174|5274)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -121,7 +123,9 @@ def reconcile_example() -> dict:
 
 
 def main() -> None:
-    uvicorn.run("repo_foundry.api:app", host="127.0.0.1", port=8765, reload=False)
+    host = os.environ.get("REPO_FOUNDRY_API_HOST", "127.0.0.1")
+    port = int(os.environ.get("REPO_FOUNDRY_API_PORT", "8765"))
+    uvicorn.run("repo_foundry.api:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":

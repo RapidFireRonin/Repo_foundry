@@ -90,7 +90,10 @@ const emptyState: DashboardState = {
   },
 };
 
-const apiBase = "http://127.0.0.1:8765";
+const apiBase =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8765"
+    : `${window.location.protocol}//${window.location.hostname}:8765`;
 
 function StatusDot({ status }: { status: string }) {
   const tone = status.includes("blocked") || status.includes("failed") ? "bad" : status.includes("review") || status.includes("draft") ? "warn" : "good";
@@ -102,14 +105,16 @@ function Panel({
   icon,
   children,
   action,
+  className = "",
 }: {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   action?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="panel">
+    <section className={`panel ${className}`}>
       <div className="panel-head">
         <div className="panel-title">
           {icon}
@@ -387,16 +392,16 @@ function App() {
           <Panel title="Pull Requests" icon={<GitPullRequest size={18} />}>
             <ItemTable items={state.prs} />
           </Panel>
-          <Panel title="Autonomous Completion" icon={<CheckCircle2 size={18} />}>
+          <Panel title="Autonomous Completion" icon={<CheckCircle2 size={18} />} className="panel-completion">
             <CompletionPanel completion={state.completion} />
           </Panel>
           <Panel title="Autonomous Watchlist" icon={<AlertTriangle size={18} />}>
             <WatchQueue items={state.watch_items} />
           </Panel>
-          <Panel title="Direct the Agents" icon={<Send size={18} />}>
+          <Panel title="Direct the Agents" icon={<Send size={18} />} className="panel-direct">
             <DirectionComposer onCreated={refresh} />
           </Panel>
-          <Panel title="Human Direction Queue" icon={<ListChecks size={18} />}>
+          <Panel title="Human Direction Queue" icon={<ListChecks size={18} />} className="panel-directions">
             <DirectionQueue items={state.directions} />
           </Panel>
           <Panel title="Hourly Cycle Timeline" icon={<History size={18} />}>

@@ -1,0 +1,17 @@
+{
+  "name": "Repo Foundry",
+  "short_name": "Foundry",
+  "description": "Direct and monitor autonomous repo agents.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fa",
+  "theme_color": "#22303d",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
