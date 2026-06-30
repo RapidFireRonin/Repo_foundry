@@ -1,0 +1,19 @@
+name: Self-Hosted Runner Safety
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    runs-on: [self-hosted, windows, repo-foundry]
+    steps:
+      - name: Require manual dispatch only
+        shell: pwsh
+        run: |
+          "Manual safety check for local runner." | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "Workspace: $env:GITHUB_WORKSPACE" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          if ($env:GITHUB_EVENT_NAME -ne "workflow_dispatch") { exit 1 }
+

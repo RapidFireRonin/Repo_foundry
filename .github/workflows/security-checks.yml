@@ -1,0 +1,30 @@
+name: Security Checks
+
+on:
+  pull_request:
+  schedule:
+    - cron: "43 3 * * *"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+  secret-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          if grep -RIn "GITHUB_TOKEN=.*[A-Za-z0-9_]" . --exclude-dir=.git; then
+            echo "Potential committed token found"
+            exit 1
+          fi
+

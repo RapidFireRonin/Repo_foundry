@@ -1,0 +1,23 @@
+name: Cycle Summary Validation
+
+on:
+  pull_request:
+    paths:
+      - "docs/agent-cycle-log.md"
+      - "AGENT_CYCLE_LOG.md"
+      - "repo_foundry/cycle_summary.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[dev]"
+      - run: pytest tests/test_cycle_summary.py
+

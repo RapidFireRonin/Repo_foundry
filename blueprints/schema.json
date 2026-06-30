@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/RapidFireRonin/Repo_foundry/blueprints/schema.json",
+  "title": "Repo Foundry Blueprint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "owner"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" },
+    "owner": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" },
+    "description": { "type": "string" },
+    "visibility": { "enum": ["private", "public"], "default": "private" },
+    "default_branch": { "type": "string", "default": "main" },
+    "topics": { "type": "array", "items": { "type": "string" } },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "color"],
+        "properties": {
+          "name": { "type": "string" },
+          "color": { "type": "string", "pattern": "^[0-9a-fA-F]{6}$" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "template", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "template": { "type": "string" },
+          "path": { "type": "string", "pattern": "^\\.github/workflows/.+\\.ya?ml$" }
+        }
+      }
+    },
+    "memory_files": { "type": "array", "items": { "type": "string" } },
+    "branch_protection_required": { "type": "boolean", "default": true },
+    "automation_mode": { "enum": ["autonomous", "manual"], "default": "autonomous" },
+    "allow_agent_main_writes": { "type": "boolean", "const": false }
+  }
+}

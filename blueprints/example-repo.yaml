@@ -1,0 +1,39 @@
+owner: RapidFireRonin
+name: example-managed-repo
+description: Example managed repository controlled by Repo Foundry.
+visibility: private
+default_branch: main
+topics:
+  - repo-foundry
+  - autonomous-agents
+labels:
+  - name: agent-change
+    color: 0e8f86
+    description: Proposed by an automated agent and visible in Repo Foundry.
+  - name: autonomous-watch
+    color: f2a900
+    description: High-impact autonomous action that should stay visible.
+  - name: safety
+    color: d73a49
+    description: Security, permissions, or runner safety concern.
+workflows:
+  - name: CI
+    template: ci
+    path: .github/workflows/ci.yml
+  - name: Agent report
+    template: agent-report
+    path: .github/workflows/agent-report.yml
+  - name: Cycle summary validation
+    template: cycle-summary
+    path: .github/workflows/cycle-summary.yml
+memory_files:
+  - AGENT_CONTEXT.md
+  - DECISIONS.md
+  - KNOWN_ISSUES.md
+  - NEXT_STEPS.md
+  - ROADMAP.md
+  - ARCHITECTURE.md
+  - AGENT_CYCLE_LOG.md
+branch_protection_required: true
+automation_mode: autonomous
+allow_agent_main_writes: false
