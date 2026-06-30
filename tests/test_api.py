@@ -149,3 +149,23 @@ def test_snapshot_operator_verdict_blocks_failing_checks() -> None:
     assert verdict["status"] == "blocked"
     assert verdict["summary"] == "Blocked by 2 failing checks."
     assert verdict["next_action"] == "Fix or rerun the failing check before attempting merge."
+
+
+def test_mission_control_endpoint_returns_collector_payload(monkeypatch) -> None:
+    monkeypatch.setattr(api, "build_mission_control", lambda: {"executive_status": {"status": "Healthy"}, "scorecard": {"metrics": []}})
+
+    client = TestClient(api.app)
+    response = client.get("/api/mission-control")
+
+    assert response.status_code == 200
+    assert response.json()["executive_status"]["status"] == "Healthy"
+
+
+def test_local_health_endpoint_degrades_as_json(monkeypatch) -> None:
+    monkeypatch.setattr(api, "collect_health", lambda: {"overall_status": "attention", "checks": {"git": {"ok": False}}})
+
+    client = TestClient(api.app)
+    response = client.get("/api/health/local")
+
+    assert response.status_code == 200
+    assert response.json()["checks"]["git"]["ok"] is False

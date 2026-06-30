@@ -38,6 +38,24 @@ Frontend: `http://127.0.0.1:5274`
 
 For iPhone access, see [docs/iphone-dashboard.md](docs/iphone-dashboard.md).
 
+## Mission Control
+
+Mission Control is the first dashboard surface. It shows the 10/10 scorecard, what changed, PR shipper decisions, local health, safety warnings, active directions, and the next recommended action.
+
+```powershell
+.\scripts\rf.ps1 health
+.\scripts\rf.ps1 pr-status
+.\scripts\rf.ps1 mission
+```
+
+Artifacts:
+
+- `artifacts/health/latest-health.json`
+- `artifacts/pr-status/latest.json`
+- `artifacts/pr-status/latest.md`
+
+Safety guidance: [docs/security/automation-credential-hardening.md](docs/security/automation-credential-hardening.md)
+
 ## Common Tasks
 
 ```powershell

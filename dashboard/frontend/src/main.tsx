@@ -92,6 +92,85 @@ type DashboardState = {
   };
 };
 
+type MissionControlState = {
+  executive_status: {
+    status: string;
+    summary: string;
+    overall_score: number;
+    open_pr_count: number;
+    failed_check_count: number;
+    last_shipper_run: string | null;
+    last_agent_cycle: string | null;
+    top_recommendation: string;
+  };
+  scorecard: {
+    overall_score: number;
+    last_evaluated: string;
+    metrics: Array<{
+      name: string;
+      score: number;
+      status: "critical" | "needs_work" | "stable" | "excellent";
+      verdict: string;
+      evidence: string[];
+      blocking_issues: string[];
+      next_action: string;
+      last_evaluated: string;
+    }>;
+  };
+  changes: Array<{
+    type: "landed" | "open" | "blocked" | "skipped" | "closed" | "agent_note";
+    title: string;
+    reference: string | null;
+    timestamp: string | null;
+    verdict: string;
+    risk: string;
+    next_action: string;
+  }>;
+  shipper: {
+    exists: boolean;
+    log_file: string;
+    last_run_at: string | null;
+    merged_prs: number[];
+    skipped_prs: Array<{ number: number; reason: string }>;
+    conflicts: string[];
+    failed_checks: string[];
+    dependency_review_overrides: string[];
+    final_merged_count: number;
+    summary: string;
+  };
+  health: {
+    overall_status: string;
+    summary: string;
+    failed_checks: string[];
+    checks: Record<string, { ok: boolean; summary: string; details?: string; path?: string }>;
+  };
+  token_warning: {
+    detected: boolean;
+    summary: string;
+    guidance_path: string;
+  };
+  cycle: {
+    found: boolean;
+    timestamp: string | null;
+    path: string | null;
+    summary: string;
+  };
+  project_guidance: {
+    strategic_objective: string;
+    next_best_deliverable: string;
+    why_it_matters: string;
+    agent_next_action: string;
+    garrett_next_action: string;
+    do_not_do: string[];
+    deliverable_target: {
+      next_deliverable: string;
+      outcome: string;
+      acceptance: string;
+      lowest_metric: string;
+    };
+  };
+};
+
 type CompletionPr = {
   number: number;
   title: string;
@@ -124,6 +203,45 @@ const emptyState: DashboardState = {
     latest_snapshots: [],
     next_action: "Poll open PRs",
     mode: "dry-run",
+  },
+};
+
+const emptyMission: MissionControlState = {
+  executive_status: {
+    status: "Loading",
+    summary: "Collecting local and GitHub status.",
+    overall_score: 0,
+    open_pr_count: 0,
+    failed_check_count: 0,
+    last_shipper_run: null,
+    last_agent_cycle: null,
+    top_recommendation: "Refresh Mission Control.",
+  },
+  scorecard: { overall_score: 0, last_evaluated: "", metrics: [] },
+  changes: [],
+  shipper: {
+    exists: false,
+    log_file: "",
+    last_run_at: null,
+    merged_prs: [],
+    skipped_prs: [],
+    conflicts: [],
+    failed_checks: [],
+    dependency_review_overrides: [],
+    final_merged_count: 0,
+    summary: "No shipper status loaded.",
+  },
+  health: { overall_status: "unknown", summary: "Health not loaded.", failed_checks: [], checks: {} },
+  token_warning: { detected: false, summary: "No token warning loaded.", guidance_path: "" },
+  cycle: { found: false, timestamp: null, path: null, summary: "No cycle summary loaded." },
+  project_guidance: {
+    strategic_objective: "",
+    next_best_deliverable: "",
+    why_it_matters: "",
+    agent_next_action: "",
+    garrett_next_action: "",
+    do_not_do: [],
+    deliverable_target: { next_deliverable: "", outcome: "", acceptance: "", lowest_metric: "" },
   },
 };
 
@@ -393,20 +511,157 @@ function CompletionPanel({ completion }: { completion: DashboardState["completio
   );
 }
 
+function ExecutiveStrip({ mission }: { mission: MissionControlState }) {
+  const summary = mission.executive_status.summary.replace(/^Attention needed:\s*/i, "").replace(/^Healthy:\s*/i, "");
+  const items = [
+    ["Overall score", `${mission.executive_status.overall_score}/10`],
+    ["Open PRs", mission.executive_status.open_pr_count],
+    ["Failed checks", mission.executive_status.failed_check_count],
+    ["Last shipper", mission.executive_status.last_shipper_run ?? "No run"],
+    ["Last cycle", mission.executive_status.last_agent_cycle ?? "No cycle"],
+  ];
+  return (
+    <section className={`mission-hero ${mission.executive_status.status.toLowerCase().replace(/\s+/g, "-")}`}>
+      <div>
+        <span className="eyebrow">Mission Control</span>
+        <h1>{mission.executive_status.status}: {summary}</h1>
+        <p>{mission.executive_status.top_recommendation}</p>
+      </div>
+      <div className="mission-strip">
+        {items.map(([label, value]) => (
+          <div className="mission-strip-item" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ScorecardPanel({ scorecard }: { scorecard: MissionControlState["scorecard"] }) {
+  return (
+    <div className="scorecard-grid">
+      {scorecard.metrics.map((metric) => (
+        <article className={`scorecard-card ${metric.status}`} key={metric.name}>
+          <div className="scorecard-top">
+            <strong>{metric.name}</strong>
+            <span>{metric.score}/10</span>
+          </div>
+          <code>{metric.status}</code>
+          <p>{metric.verdict}</p>
+          {metric.blocking_issues.length ? <small>Blocked by: {metric.blocking_issues.join(" ")}</small> : <small>Evidence: {metric.evidence.slice(0, 2).join(" · ")}</small>}
+          <small>Next: {metric.next_action}</small>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function WhatChangedPanel({ items }: { items: MissionControlState["changes"] }) {
+  return (
+    <div className="change-list">
+      {items.map((item, index) => (
+        <article className={`change-row ${item.type}`} key={`${item.type}-${item.title}-${index}`}>
+          <div>
+            <strong>{item.title}</strong>
+            <span>{item.verdict}</span>
+            <small>{item.timestamp ?? "No timestamp"} · {item.reference ?? "local reference unavailable"}</small>
+            <small>Next: {item.next_action}</small>
+          </div>
+          <code>{item.type}</code>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ShipperPanel({ shipper }: { shipper: MissionControlState["shipper"] }) {
+  return (
+    <div className="operator-panel">
+      <div className="operator-verdict">
+        <strong>{shipper.summary}</strong>
+        <code>{shipper.last_run_at ?? "no-run"}</code>
+      </div>
+      <div className="mini-grid">
+        <div><span>Merged last run</span><strong>{shipper.final_merged_count || shipper.merged_prs.length}</strong></div>
+        <div><span>Skipped</span><strong>{shipper.skipped_prs.length}</strong></div>
+        <div><span>Failed checks</span><strong>{shipper.failed_checks.length}</strong></div>
+        <div><span>Conflicts</span><strong>{shipper.conflicts.length}</strong></div>
+      </div>
+      <small>{shipper.log_file}</small>
+      <pre className="command-snippet">.\scripts\repo_foundry_pr_shipper.ps1</pre>
+    </div>
+  );
+}
+
+function HealthPanel({ health }: { health: MissionControlState["health"] }) {
+  const checks = Object.entries(health.checks);
+  return (
+    <div className="health-grid">
+      <div className="operator-verdict">
+        <strong>{health.summary}</strong>
+        <code>{health.overall_status}</code>
+      </div>
+      {checks.map(([name, check]) => (
+        <div className={`health-check ${check.ok ? "ok" : "warn"}`} key={name}>
+          <span>{name.replace(/_/g, " ")}</span>
+          <strong>{check.ok ? "OK" : "Needs attention"}</strong>
+          <small>{check.summary}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SafetyPanel({ warning }: { warning: MissionControlState["token_warning"] }) {
+  return (
+    <div className={`safety-card ${warning.detected ? "warn" : "ok"}`}>
+      <AlertTriangle size={18} />
+      <div>
+        <strong>{warning.detected ? "Credential warning" : "Credential check"}</strong>
+        <span>{warning.summary}</span>
+        <small>{warning.guidance_path}</small>
+      </div>
+    </div>
+  );
+}
+
+function ProjectGuidancePanel({ guidance }: { guidance: MissionControlState["project_guidance"] }) {
+  return (
+    <div className="guidance">
+      <strong>{guidance.next_best_deliverable}</strong>
+      <p>{guidance.strategic_objective}</p>
+      <div className="guidance-target">
+        <span>Outcome</span>
+        <strong>{guidance.deliverable_target.outcome}</strong>
+        <span>Acceptance</span>
+        <strong>{guidance.deliverable_target.acceptance}</strong>
+      </div>
+      <small>Agents: {guidance.agent_next_action}</small>
+      <small>Garrett: {guidance.garrett_next_action}</small>
+      <small>Do not: {guidance.do_not_do.join(" · ")}</small>
+    </div>
+  );
+}
+
 function App() {
   const [state, setState] = useState<DashboardState>(emptyState);
+  const [mission, setMission] = useState<MissionControlState>(emptyMission);
   const [cycleLog, setCycleLog] = useState("");
   const [plan, setPlan] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
     setLoading(true);
-    const [dashboard, log, reconcile] = await Promise.all([
+    const [dashboard, log, reconcile, missionControl] = await Promise.all([
       fetch(`${apiBase}/api/dashboard`).then((r) => r.json()),
       fetch(`${apiBase}/api/cycle-log`).then((r) => r.json()),
       fetch(`${apiBase}/api/reconcile/example`).then((r) => r.json()),
+      fetch(`${apiBase}/api/mission-control`).then((r) => r.json()),
     ]);
     setState(dashboard);
+    setMission(missionControl);
     setCycleLog(log.content);
     setPlan(reconcile);
     setLoading(false);
@@ -457,14 +712,16 @@ function App() {
       <section className="content">
         <header className="topbar">
           <div>
-            <h1>Operational Overview</h1>
-            <p>Autonomous repo automation with dry-run plans, audit trails, and friendly visibility.</p>
+            <h1>Mission Control</h1>
+            <p>Autonomous repo automation with safe shipping, audit trails, and phone-friendly visibility.</p>
           </div>
           <button onClick={refresh} disabled={loading}>
             <RefreshCcw size={16} />
             Refresh
           </button>
         </header>
+
+        <ExecutiveStrip mission={mission} />
 
         <div className="metrics">
           {counts.map(([label, value]) => (
@@ -473,6 +730,27 @@ function App() {
               <strong>{value}</strong>
             </div>
           ))}
+        </div>
+
+        <div className="mission-grid">
+          <Panel title="10/10 Scorecard" icon={<ListChecks size={18} />}>
+            <ScorecardPanel scorecard={mission.scorecard} />
+          </Panel>
+          <Panel title="What Changed" icon={<History size={18} />}>
+            <WhatChangedPanel items={mission.changes} />
+          </Panel>
+          <Panel title="Local PR Shipper" icon={<Hammer size={18} />}>
+            <ShipperPanel shipper={mission.shipper} />
+          </Panel>
+          <Panel title="Health Check" icon={<CheckCircle2 size={18} />}>
+            <HealthPanel health={mission.health} />
+          </Panel>
+          <Panel title="Safety" icon={<ShieldCheck size={18} />}>
+            <SafetyPanel warning={mission.token_warning} />
+          </Panel>
+          <Panel title="Project Guidance" icon={<FileText size={18} />}>
+            <ProjectGuidancePanel guidance={mission.project_guidance} />
+          </Panel>
         </div>
 
         <div className="grid">
