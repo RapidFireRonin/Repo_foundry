@@ -118,6 +118,35 @@ nav a.active {
   color: #ffffff;
 }
 
+.sidebar-status {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebar-status > div {
+  background: #2c3d4c;
+  border: 1px solid #3b5061;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 0;
+}
+
+.sidebar-status span {
+  display: block;
+  color: #aebdca;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sidebar-status strong {
+  display: block;
+  color: #ffffff;
+  font-size: 13px;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
 .content {
   padding: 28px;
 }
@@ -385,6 +414,10 @@ h1 {
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: 16px;
   margin-bottom: 16px;
+}
+
+.operator-priority {
+  margin-bottom: 18px;
 }
 
 .scorecard-grid,
@@ -669,13 +702,9 @@ h1 {
 
 .wide-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
   gap: 16px;
   margin-top: 16px;
-}
-
-.wide-grid .panel:last-child {
-  grid-column: 1 / -1;
 }
 
 .panel {
@@ -992,6 +1021,10 @@ pre {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .sidebar-status {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .metrics,
   .grid,
   .wide-grid,
@@ -1041,6 +1074,10 @@ pre {
 
   nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sidebar-status {
+    grid-template-columns: 1fr;
   }
 
   nav a {
