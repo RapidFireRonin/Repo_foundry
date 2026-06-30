@@ -1,0 +1,54 @@
+version: 1
+mode: dry-run-by-default
+merge_method: squash
+
+allowed_branch_patterns:
+  - "builder/**"
+  - "architect/**"
+  - "reviewer/**"
+  - "scout/**"
+  - "fix/**"
+
+required_checks:
+  - "Tests"
+  - "Security Checks"
+
+limits:
+  max_changed_files: 12
+  max_additions: 800
+  max_deletions: 300
+
+blocked_paths:
+  - ".github/workflows/**"
+  - ".env"
+  - "**/.env"
+  - "**/*secret*"
+  - "**/*token*"
+
+sensitive_paths_require_explicit_policy_allow:
+  - "policies/**"
+  - "contracts/**"
+  - "repo_foundry/github_client.py"
+  - "repo_foundry/executor.py"
+
+dangerous_operation_denylist:
+  - "force-push"
+  - "delete-branch-before-merge"
+  - "delete-repository"
+  - "disable-branch-protection"
+  - "write-secret"
+  - "print-secret"
+  - "execute-untrusted-event-content"
+
+merge_requirements:
+  require_mergeable_true: true
+  require_no_failed_checks: true
+  require_no_unknown_checks: true
+  require_audit_entry_before_merge: true
+  require_completion_log_after_merge: true
+
+superseded_pr_policy:
+  allow_autoclose_only_when_marker_present: true
+  marker: "Supersedes #"
+  require_replacement_pr_open_or_merged: true
+  never_close_human_authored_without_marker: true
