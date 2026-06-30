@@ -29,6 +29,7 @@ gh auth status
 ```
 
 Prefer fine-grained tokens when possible. Never commit tokens or runner secrets.
+If `GITHUB_TOKEN` is set locally and `gh auth status` says it is invalid, remove or replace that environment variable; GitHub CLI gives it precedence over stored login state.
 
 ## Self-Hosted Runner Safety
 

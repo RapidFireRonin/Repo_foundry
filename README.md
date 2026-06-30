@@ -42,6 +42,7 @@ Frontend: `http://127.0.0.1:5274`
 python -m repo_foundry.blueprints validate blueprints/example-repo.yaml
 python -m repo_foundry.reconcile plan blueprints/example-repo.yaml --registry registry/repos.yaml
 python -m repo_foundry.reconcile apply blueprints/example-repo.yaml --registry registry/repos.yaml
+python -m repo_foundry.reconcile apply blueprints/example-repo.yaml --registry registry/repos.yaml --execute
 python -m repo_foundry.directions add "Polish dashboard" "Make the local control plane easier to read" --priority 90
 python -m repo_foundry.cycle_summary append --from-sample
 python -m repo_foundry.api
@@ -72,5 +73,7 @@ For GitHub tokens, start with least privilege:
 - Fine-grained tokens scoped to the target owner and repositories are preferred.
 - Actions and workflow updates should use pull requests.
 - Do not store tokens in files. Use environment variables or GitHub secrets.
+- For local apply, run `gh auth login` or set a valid `GH_TOKEN`.
+- For GitHub Actions apply across repos, set `REPO_FOUNDRY_GH_TOKEN` as a repository secret when the default `github.token` is not broad enough.
 
 See [docs/windows-setup.md](docs/windows-setup.md) and [docs/autonomous-direction.md](docs/autonomous-direction.md).

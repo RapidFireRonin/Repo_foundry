@@ -1,0 +1,60 @@
+name: Autonomous Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      blueprint:
+        description: Blueprint path to apply
+        required: true
+        default: blueprints/example-repo.yaml
+      registry:
+        description: Registry path
+        required: true
+        default: registry/repos.yaml
+      execute:
+        description: Run real GitHub writes instead of dry-run
+        required: true
+        type: boolean
+        default: false
+  schedule:
+    - cron: "23 * * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.REPO_FOUNDRY_GH_TOKEN || github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[dev]"
+      - name: Configure git identity
+        run: |
+          git config --global user.name "repo-foundry[bot]"
+          git config --global user.email "repo-foundry[bot]@users.noreply.github.com"
+      - name: Autonomous dry-run
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.execute != true }}
+        run: |
+          python -m repo_foundry.reconcile apply "${{ inputs.blueprint || 'blueprints/example-repo.yaml' }}" --registry "${{ inputs.registry || 'registry/repos.yaml' }}" > autonomous-apply.json
+          cat autonomous-apply.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Autonomous execute
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.execute == true }}
+        run: |
+          python -m repo_foundry.reconcile apply "${{ inputs.blueprint }}" --registry "${{ inputs.registry }}" --execute > autonomous-apply.json
+          cat autonomous-apply.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-apply
+          path: |
+            autonomous-apply.json
+            artifacts/**
+            logs/**

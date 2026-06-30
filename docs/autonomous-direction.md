@@ -22,6 +22,6 @@ Repo Foundry is autonomous by default, but Garrett can direct what it works on.
 
 ## Autonomous Execution
 
-`python -m repo_foundry.reconcile apply ...` runs as a dry-run by default. Add `--execute` when the scheduled or local runner is intentionally allowed to perform GitHub writes.
+`python -m repo_foundry.reconcile apply ...` runs as a dry-run by default. Add `--execute` when the scheduled or local runner is intentionally allowed to perform GitHub writes. Local execution needs `gh auth login` or a valid `GH_TOKEN`; GitHub Actions execution can use `REPO_FOUNDRY_GH_TOKEN` for cross-repo creation and PR work.
 
 Human-friendly visibility remains mandatory: audit logs, artifacts, dashboard panels, and hourly cycle summaries should be readable without digging through raw runner logs.
