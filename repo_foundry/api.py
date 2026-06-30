@@ -73,6 +73,51 @@ def dashboard() -> DashboardState:
     )
 
 
+def snapshot_operator_verdict(snapshot: dict[str, Any]) -> dict[str, str]:
+    checks = snapshot.get("checks") or {}
+    failing_count = int(checks.get("failing_count") or 0)
+    unknown_count = int(checks.get("unknown_count") or 0)
+    mergeable = snapshot.get("mergeable")
+    policy_decision = str(snapshot.get("policy_decision") or "unknown")
+    merge_state = str(snapshot.get("merge_state") or "unknown")
+
+    if snapshot.get("merged"):
+        return {
+            "status": "merged",
+            "summary": "Already merged.",
+            "next_action": "Record the merge in the cycle log and continue with the next issue #13 metric.",
+        }
+    if failing_count:
+        return {
+            "status": "blocked",
+            "summary": f"Blocked by {failing_count} failing check{'s' if failing_count != 1 else ''}.",
+            "next_action": "Fix or rerun the failing check before attempting merge.",
+        }
+    if unknown_count:
+        return {
+            "status": "watch",
+            "summary": f"Waiting on {unknown_count} unknown check{'s' if unknown_count != 1 else ''}.",
+            "next_action": "Wait for checks to finish, then refresh the PR status snapshot.",
+        }
+    if mergeable is False:
+        return {
+            "status": "blocked",
+            "summary": f"Not mergeable: {merge_state}.",
+            "next_action": "Rebuild the branch from current main or close it with a replacement PR reference.",
+        }
+    if policy_decision == "eligible" and mergeable is True:
+        return {
+            "status": "ready",
+            "summary": "Eligible for merge under the current policy snapshot.",
+            "next_action": "Merge using the configured safe merge method and record the completion log entry.",
+        }
+    return {
+        "status": "review",
+        "summary": f"Policy decision is {policy_decision}.",
+        "next_action": "Review the risk note and policy reasons before changing PR state.",
+    }
+
+
 def read_pr_status_snapshots(artifact_root: Path | None = None, limit: int = 20) -> list[dict[str, Any]]:
     root = artifact_root or repo_root() / "artifacts" / "pr-status"
     if not root.exists():
@@ -87,6 +132,7 @@ def read_pr_status_snapshots(artifact_root: Path | None = None, limit: int = 20)
         if payload.get("schema_version") != "pr-status-snapshot/v1":
             continue
         payload["artifact_path"] = str(path)
+        payload["operator_verdict"] = snapshot_operator_verdict(payload)
         snapshots.append(payload)
 
     return sorted(
