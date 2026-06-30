@@ -1,0 +1,16 @@
+products:
+  - id: repo-foundry-mission-control
+    title: Repo Foundry Mission Control
+    status: usable
+    kind: control-plane
+    description: Launchable local dashboard for directing autonomous agents, watching progress, and inspecting proof.
+    launch_url: /
+    repo_url: https://github.com/RapidFireRonin/Repo_foundry
+    visual_proof: /artifacts/visuals/mission-control-cleaned-desktop.png
+    test_evidence:
+      - Frontend build passes with pnpm run build.
+      - Backend and direction API tests pass in pytest.
+      - GitHub PR checks passed before merge.
+    quality: Usable as the current local control window; continue replacing vague status cards with launchable product cards.
+    next_action: Use the Build Console to direct the next user-facing product, then register it here with launch and proof links.
+    last_verified: "2026-06-30"

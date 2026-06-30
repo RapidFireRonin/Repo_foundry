@@ -25,3 +25,9 @@ Repo Foundry is autonomous by default, but Garrett can direct what it works on.
 `python -m repo_foundry.reconcile apply ...` runs as a dry-run by default. Add `--execute` when the scheduled or local runner is intentionally allowed to perform GitHub writes. Local execution needs `gh auth login` or a valid `GH_TOKEN`; GitHub Actions execution can use `REPO_FOUNDRY_GH_TOKEN` for cross-repo creation and PR work.
 
 Human-friendly visibility remains mandatory: audit logs, artifacts, dashboard panels, and hourly cycle summaries should be readable without digging through raw runner logs.
+
+## Product Deliverables
+
+When a direction results in a usable product, playable game, launchable tool, or repo someone can inspect, agents must add or update an entry in `registry/products.yaml`.
+
+The Mission Control Playable / Usable Products gallery reads that registry. A deliverable is not fully complete until the entry includes a launch or inspection URL, proof artifact when relevant, test evidence, quality verdict, and next action.

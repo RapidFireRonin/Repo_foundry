@@ -188,6 +188,7 @@ def build_mission_control(root: Path | None = None) -> dict[str, Any]:
         health=health,
         shipper=shipper,
         pr_status=pr_status,
+        root=base,
     )
     token_warning = token_warning_from_environment()
     directions = [item.model_dump(mode="json") for item in registry.directions]

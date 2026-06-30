@@ -208,16 +208,10 @@ type MissionControlState = {
     generated_at: string;
     summary: string;
     next_product_goal: string;
-    products: Array<{
-      title: string;
-      status: string;
-      what_was_built: string;
-      open_url: string | null;
-      visual_proof: string | null;
-      test_evidence: string[];
-      quality: string;
-      next_action: string;
-    }>;
+    launchable_count: number;
+    registry_path: string;
+    completed_products: Array<ProductCard>;
+    products: Array<ProductCard>;
   };
   product_controls: {
     active_goal_count: number;
@@ -246,6 +240,23 @@ type MissionControlState = {
       lowest_metric: string;
     };
   };
+};
+
+type ProductCard = {
+  id: string;
+  title: string;
+  status: string;
+  kind: string;
+  launch_state: string;
+  what_was_built: string;
+  open_url: string | null;
+  repo_url?: string | null;
+  visual_proof: string | null;
+  test_evidence: string[];
+  quality: string;
+  next_action: string;
+  last_verified?: string | null;
+  source?: string;
 };
 
 type CompletionPr = {
@@ -330,6 +341,9 @@ const emptyMission: MissionControlState = {
     generated_at: "",
     summary: "Loading product proof.",
     next_product_goal: "Add a product direction.",
+    launchable_count: 0,
+    registry_path: "registry/products.yaml",
+    completed_products: [],
     products: [],
   },
   product_controls: {
@@ -399,29 +413,44 @@ function PhoneAccessPanel({ access }: { access: MissionControlState["operator_ac
 }
 
 function ProductShowcasePanel({ showcase }: { showcase: MissionControlState["product_showcase"] }) {
+  const completedProducts = showcase.completed_products ?? [];
+  const allProducts = showcase.products ?? [];
+  const visibleProducts = completedProducts.length ? completedProducts : allProducts;
   return (
     <div className="product-showcase">
       <div className="operator-verdict">
         <strong>{showcase.summary}</strong>
-        <code>proof-led</code>
+        <code>{showcase.launchable_count} launchable</code>
       </div>
-      <div className="product-grid">
-        {showcase.products.length ? showcase.products.map((product) => (
-          <article className="product-card" key={product.title}>
-            {product.visual_proof ? <img src={`${apiBase}${product.visual_proof}`} alt={`${product.title} proof`} /> : null}
+      <div className="product-library-note">
+        <strong>Completed products live here.</strong>
+        <span>Agents register usable or playable products in {showcase.registry_path}. Each card should have a launch link, proof, tests, and a quality verdict.</span>
+      </div>
+      <div className="product-grid usable-products">
+        {visibleProducts.length ? visibleProducts.map((product) => {
+          const launchState = product.launch_state ?? (product.open_url ? "launchable" : "proof-only");
+          return (
+          <article className={`product-card launch-${launchState}`} key={product.id || product.title}>
+            {product.visual_proof ? <img src={`${apiBase}${product.visual_proof}`} alt={`${product.title} proof`} /> : <div className="product-proof-missing">No visual proof yet</div>}
             <div>
               <div className="product-card-top">
                 <strong>{product.title}</strong>
                 <code>{product.status}</code>
               </div>
+              <span className="product-kind">{product.kind ?? "product"} · {launchState}</span>
               <span>{product.what_was_built}</span>
               <small>Quality: {product.quality}</small>
               <small>Tests: {product.test_evidence.slice(0, 2).join(" · ")}</small>
               <small>Next: {product.next_action}</small>
-              {product.open_url ? <a className="inline-link" href={product.open_url}>Open</a> : null}
+              <div className="product-actions">
+                {product.open_url ? <a className="primary-link" href={product.open_url} target={product.open_url.startsWith("http") ? "_blank" : undefined} rel="noreferrer">Open Product</a> : <span className="disabled-link">No launch link</span>}
+                {product.visual_proof ? <a className="inline-link" href={`${apiBase}${product.visual_proof}`} target="_blank" rel="noreferrer">View Proof</a> : null}
+                {product.repo_url ? <a className="inline-link" href={product.repo_url} target="_blank" rel="noreferrer">Repo</a> : null}
+              </div>
+              {product.last_verified ? <small>Verified: {product.last_verified}</small> : null}
             </div>
           </article>
-        )) : <div className="empty-panel">No product cards yet. Add a direction and let the next cycle attach tests, PRs, and screenshots.</div>}
+        );}) : <div className="empty-panel">No usable products are registered yet. Add a direction, ship the product, then add it to registry/products.yaml with a launch URL and proof.</div>}
       </div>
       <div className="next-product-goal">{showcase.next_product_goal}</div>
     </div>
@@ -1079,7 +1108,7 @@ function App() {
           <Panel title="Agent Activity Lanes" icon={<Sparkles size={18} />}>
             <AgentActivityPanel activity={mission.agent_activity} />
           </Panel>
-          <Panel title="Products Created" icon={<MonitorSmartphone size={18} />} className="panel-products">
+          <Panel title="Playable / Usable Products" icon={<MonitorSmartphone size={18} />} className="panel-products">
             <ProductShowcasePanel showcase={mission.product_showcase} />
           </Panel>
           <Panel title="Visual Proof" icon={<Eye size={18} />}>
