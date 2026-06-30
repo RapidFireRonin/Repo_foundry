@@ -34,6 +34,61 @@ def test_create_direction_route_writes_registry_and_returns_item(tmp_path: Path,
     assert saved["directions"][0]["title"] == "Focus on GitHub adapter"
 
 
+def test_direction_status_route_updates_registry_and_returns_item(tmp_path: Path, monkeypatch) -> None:
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+    registry = registry_dir / "repos.yaml"
+    registry.write_text(
+        yaml.safe_dump(
+            {
+                "repos": [],
+                "directions": [
+                    {
+                        "title": "Direct the agents",
+                        "priority": 95,
+                        "scope": "global",
+                        "desired_outcome": "Let Garrett pause and complete directions from the dashboard.",
+                        "details": "",
+                        "avoid": [],
+                        "status": "active",
+                        "source": "dashboard",
+                        "created_at": "2026-06-30T13:24:00+00:00",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(api, "repo_root", lambda: tmp_path)
+
+    client = TestClient(api.app)
+    response = client.patch(
+        "/api/directions/status",
+        json={"created_at": "2026-06-30T13:24:00+00:00", "status": "paused"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "paused"
+    saved = yaml.safe_load(registry.read_text(encoding="utf-8"))
+    assert saved["directions"][0]["status"] == "paused"
+
+
+def test_direction_status_route_returns_404_for_missing_direction(tmp_path: Path, monkeypatch) -> None:
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+    (registry_dir / "repos.yaml").write_text(yaml.safe_dump({"repos": [], "directions": []}), encoding="utf-8")
+    monkeypatch.setattr(api, "repo_root", lambda: tmp_path)
+
+    client = TestClient(api.app)
+    response = client.patch(
+        "/api/directions/status",
+        json={"created_at": "2026-06-30T13:24:00+00:00", "status": "done"},
+    )
+
+    assert response.status_code == 404
+
+
 def test_read_pr_status_snapshots_adds_operator_verdict(tmp_path: Path) -> None:
     snapshot_dir = tmp_path / "RapidFireRonin_Repo_foundry" / "pr-22"
     snapshot_dir.mkdir(parents=True)
