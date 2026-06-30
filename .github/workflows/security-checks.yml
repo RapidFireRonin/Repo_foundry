@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
   security-events: write
 
 jobs:
@@ -22,9 +23,15 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          if grep -RIn "GITHUB_TOKEN=.*[A-Za-z0-9_]" . --exclude-dir=.git; then
-            echo "Potential committed token found"
+      - name: Scan for committed GitHub token assignments
+        run: |
+          set -euo pipefail
+          # Keep this lightweight guard from matching its own workflow command or documentation examples.
+          # GitHub tokens use recognizable prefixes; placeholder-like long strings are not enough to fail CI.
+          if grep -RInE '^[[:space:]]*(export[[:space:]]+)?(REPO_FOUNDRY_GH_TOKEN|GH_TOKEN|GITHUB_TOKEN)[[:space:]]*=[[:space:]]*(ghp_|github_pat_|gho_|ghu_|ghs_|ghr_)' . \
+            --exclude-dir=.git \
+            --exclude-dir=.venv \
+            --exclude='security-checks.yml'; then
+            echo "Potential committed GitHub token found"
             exit 1
           fi
-
