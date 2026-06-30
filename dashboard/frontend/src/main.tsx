@@ -45,6 +45,28 @@ type DashboardState = {
   }>;
   watch_items: Item[];
   cycle_entries: Item[];
+  completion: {
+    ready: CompletionPr[];
+    blocked: CompletionPr[];
+    failed_checks: CompletionPr[];
+    stale: CompletionPr[];
+    recently_merged: CompletionPr[];
+    next_action: string;
+    mode: string;
+  };
+};
+
+type CompletionPr = {
+  number: number;
+  title: string;
+  url: string;
+  branch: string;
+  mergeable: string;
+  check_status: string;
+  failed_checks: string[];
+  stale: boolean;
+  superseded_by?: number | null;
+  decision: { allowed?: boolean; risk?: string; reasons?: string[] };
 };
 
 const emptyState: DashboardState = {
@@ -57,9 +79,21 @@ const emptyState: DashboardState = {
   directions: [],
   watch_items: [],
   cycle_entries: [],
+  completion: {
+    ready: [],
+    blocked: [],
+    failed_checks: [],
+    stale: [],
+    recently_merged: [],
+    next_action: "Poll open PRs",
+    mode: "dry-run",
+  },
 };
 
-const apiBase = "http://127.0.0.1:8765";
+const apiBase =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8765"
+    : `${window.location.protocol}//${window.location.hostname}:8765`;
 
 function StatusDot({ status }: { status: string }) {
   const tone = status.includes("blocked") || status.includes("failed") ? "bad" : status.includes("review") || status.includes("draft") ? "warn" : "good";
@@ -71,14 +105,16 @@ function Panel({
   icon,
   children,
   action,
+  className = "",
 }: {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   action?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="panel">
+    <section className={`panel ${className}`}>
       <div className="panel-head">
         <div className="panel-title">
           {icon}
@@ -230,6 +266,46 @@ function DirectionQueue({ items }: { items: DashboardState["directions"] }) {
   );
 }
 
+function CompletionPanel({ completion }: { completion: DashboardState["completion"] }) {
+  const rows = [
+    ["Ready", completion.ready.length, "good"],
+    ["Blocked", completion.blocked.length, "bad"],
+    ["Failed", completion.failed_checks.length, "bad"],
+    ["Stale", completion.stale.length, "warn"],
+    ["Merged", completion.recently_merged.length, "good"],
+  ];
+  const visible = [...completion.ready, ...completion.blocked, ...completion.stale].slice(0, 5);
+  return (
+    <div className="completion-panel">
+      <div className="completion-summary">
+        {rows.map(([label, value, tone]) => (
+          <div className={`completion-stat ${tone}`} key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="completion-next">
+        <strong>{completion.next_action}</strong>
+        <code>{completion.mode}</code>
+      </div>
+      <div className="completion-list">
+        {visible.length ? visible.map((pr) => (
+          <article className="completion-row" key={pr.number}>
+            <div>
+              <strong>#{pr.number} {pr.title}</strong>
+              <span>{pr.branch} · {pr.mergeable} · {pr.decision.risk ?? "unknown risk"}</span>
+              {pr.decision.reasons?.length ? <small>{pr.decision.reasons.join("; ")}</small> : null}
+              {pr.failed_checks.length ? <small>Failed: {pr.failed_checks.join(", ")}</small> : null}
+            </div>
+            <code>{pr.decision.allowed ? "ready" : pr.check_status}</code>
+          </article>
+        )) : <div className="empty-panel">No polled PRs yet.</div>}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [state, setState] = useState<DashboardState>(emptyState);
   const [cycleLog, setCycleLog] = useState("");
@@ -316,13 +392,16 @@ function App() {
           <Panel title="Pull Requests" icon={<GitPullRequest size={18} />}>
             <ItemTable items={state.prs} />
           </Panel>
+          <Panel title="Autonomous Completion" icon={<CheckCircle2 size={18} />} className="panel-completion">
+            <CompletionPanel completion={state.completion} />
+          </Panel>
           <Panel title="Autonomous Watchlist" icon={<AlertTriangle size={18} />}>
             <WatchQueue items={state.watch_items} />
           </Panel>
-          <Panel title="Direct the Agents" icon={<Send size={18} />}>
+          <Panel title="Direct the Agents" icon={<Send size={18} />} className="panel-direct">
             <DirectionComposer onCreated={refresh} />
           </Panel>
-          <Panel title="Human Direction Queue" icon={<ListChecks size={18} />}>
+          <Panel title="Human Direction Queue" icon={<ListChecks size={18} />} className="panel-directions">
             <DirectionQueue items={state.directions} />
           </Panel>
           <Panel title="Hourly Cycle Timeline" icon={<History size={18} />}>

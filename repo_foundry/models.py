@@ -174,6 +174,7 @@ class DashboardState(BaseModel):
     directions: list[dict[str, Any]]
     watch_items: list[dict[str, Any]]
     cycle_entries: list[dict[str, Any]]
+    completion: dict[str, Any]
 
 
 def repo_root() -> Path:
