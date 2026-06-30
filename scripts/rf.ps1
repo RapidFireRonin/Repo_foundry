@@ -78,7 +78,13 @@ function Get-TailscaleIp {
   if ($env:REPO_FOUNDRY_TAILSCALE_IP) { return $env:REPO_FOUNDRY_TAILSCALE_IP }
   $cmd = Get-Command tailscale -ErrorAction SilentlyContinue
   if (-not $cmd) { return $null }
-  $ip = (& $cmd.Source ip -4 2>$null | Where-Object { $_ -like "100.*" } | Select-Object -First 1)
+  try {
+    $output = & $cmd.Source ip -4 2>&1
+  } catch {
+    return $null
+  }
+  if ($LASTEXITCODE -ne 0) { return $null }
+  $ip = ($output | Where-Object { $_ -like "100.*" } | Select-Object -First 1)
   return $ip
 }
 

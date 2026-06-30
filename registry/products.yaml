@@ -14,3 +14,18 @@ products:
     quality: Usable as the current local control window; continue replacing vague status cards with launchable product cards.
     next_action: Use the Build Console to direct the next user-facing product, then register it here with launch and proof links.
     last_verified: "2026-06-30"
+  - id: chrono-rift
+    title: Chrono Rift
+    status: playable
+    kind: game
+    description: Playable browser RPG slice with era jumping, timeline proof, future-gated puzzle logic, and save/load/restart controls.
+    launch_url: /chrono-rift.html
+    repo_url: https://github.com/RapidFireRonin/Repo_foundry
+    visual_proof: /artifacts/visuals/chrono-rift-gallery.png
+    test_evidence:
+      - "PR #31 checks passed before merge."
+      - Browser smoke opens /chrono-rift.html locally.
+      - Gameplay flow supports jumping between Past, Present, and Future.
+    quality: Playable local slice; continue expanding content and automated playtest coverage.
+    next_action: Add automated browser playtest coverage for the critical future-knowledge to past-solution loop.
+    last_verified: "2026-06-30"
