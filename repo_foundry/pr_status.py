@@ -54,6 +54,57 @@ def recommend_pr(item: dict[str, Any], files: list[str], failed: list[str], pend
     return "merge", "Checks are clean and the PR appears safe for the shipper policy."
 
 
+def operator_summary(prs: list[dict[str, Any]], degraded_error: str | None = None) -> dict[str, str]:
+    if degraded_error:
+        return {
+            "status": "degraded",
+            "summary": "PR status could not be collected.",
+            "next_action": "Fix GitHub CLI availability/authentication, then rerun .\\scripts\\rf.ps1 pr-status.",
+        }
+    if not prs:
+        return {
+            "status": "clear",
+            "summary": "No open PRs are waiting on the completion loop.",
+            "next_action": "Safe to pick one issue #13 runtime, UI, logging, or safety improvement.",
+        }
+
+    recommendations = [str(pr.get("shipper_recommendation") or "unknown") for pr in prs]
+    failed = [pr for pr in prs if pr.get("failed_checks")]
+    blocked = [pr for pr in prs if pr.get("shipper_recommendation") in {"rebuild", "fix_checks", "manual_attention"}]
+    waiting = [pr for pr in prs if pr.get("shipper_recommendation") == "wait"]
+    merge_ready = [pr for pr in prs if pr.get("shipper_recommendation") == "merge"]
+
+    if blocked:
+        return {
+            "status": "blocked",
+            "summary": f"{len(blocked)} open PR(s) need repair before the shipper should merge.",
+            "next_action": "Fix failed checks, rebuild dirty branches from main, or leave sensitive-path changes for manual review.",
+        }
+    if failed:
+        return {
+            "status": "blocked",
+            "summary": f"{len(failed)} open PR(s) have failing checks.",
+            "next_action": "Repair or rerun the failed checks before attempting merge.",
+        }
+    if waiting and not merge_ready:
+        return {
+            "status": "waiting",
+            "summary": f"{len(waiting)} open PR(s) are waiting on checks or mergeability.",
+            "next_action": "Wait for checks to finish, then refresh the PR status snapshot.",
+        }
+    if merge_ready:
+        return {
+            "status": "ready",
+            "summary": f"{len(merge_ready)} open PR(s) appear ready for the safe shipper policy.",
+            "next_action": "Run the PR shipper or enable the configured auto-merge path.",
+        }
+    return {
+        "status": "review",
+        "summary": f"{len(prs)} open PR(s) need policy review: {', '.join(sorted(set(recommendations)))}.",
+        "next_action": "Review each PR recommendation before changing branch or merge state.",
+    }
+
+
 def snapshot_from_gh_item(repo: str, item: dict[str, Any]) -> dict[str, Any]:
     files = [entry.get("path", "") for entry in item.get("files", []) if entry.get("path")]
     checks = item.get("statusCheckRollup", [])
@@ -103,7 +154,9 @@ def collect_pr_status(repo: str = "RapidFireRonin/Repo_foundry") -> dict[str, An
             "degraded": True,
             "error": message,
             "open_pr_count": 0,
+            "failed_check_count": 0,
             "pull_requests": [],
+            "operator_summary": operator_summary([], message),
             "summary": f"PR status degraded: {message}",
         }
     items = json.loads(result.stdout or "[]")
@@ -116,6 +169,7 @@ def collect_pr_status(repo: str = "RapidFireRonin/Repo_foundry") -> dict[str, An
         "open_pr_count": len(prs),
         "failed_check_count": failed_count,
         "pull_requests": prs,
+        "operator_summary": operator_summary(prs),
         "summary": "No open PRs." if not prs else f"{len(prs)} open PR(s), {failed_count} failing check(s).",
     }
 
@@ -127,6 +181,15 @@ def write_pr_status_artifacts(payload: dict[str, Any], output_dir: str | Path | 
     md_path = root / "latest.md"
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     lines = [f"# PR Status Snapshot", "", f"Generated: {payload['generated_at']}", "", payload.get("summary", "")]
+    if payload.get("operator_summary"):
+        summary = payload["operator_summary"]
+        lines.extend([
+            "",
+            "## Operator Summary",
+            f"- Status: {summary.get('status')}",
+            f"- Summary: {summary.get('summary')}",
+            f"- Next action: {summary.get('next_action')}",
+        ])
     for pr in payload.get("pull_requests", []):
         lines.extend([
             "",
@@ -147,6 +210,10 @@ def main() -> None:
     payload = collect_pr_status()
     paths = write_pr_status_artifacts(payload)
     print(payload["summary"])
+    if payload.get("operator_summary"):
+        operator = payload["operator_summary"]
+        print(f"Operator status: {operator['status']}")
+        print(f"Next action: {operator['next_action']}")
     print(f"JSON artifact: {paths['json']}")
     print(f"Markdown artifact: {paths['markdown']}")
 
