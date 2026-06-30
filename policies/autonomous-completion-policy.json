@@ -1,0 +1,33 @@
+{
+  "enabled": true,
+  "execute": true,
+  "max_merges_per_run": 3,
+  "max_files_changed": 30,
+  "max_additions": 1500,
+  "max_deletions": 1000,
+  "update_stale_branches": true,
+  "require_non_draft": true,
+  "require_mergeable_state": ["clean", "has_hooks", "unstable"],
+  "dependency_files": [
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "requirements.txt",
+    "pyproject.toml",
+    "poetry.lock",
+    "Pipfile",
+    "Pipfile.lock"
+  ],
+  "ignorable_failed_checks_without_dependency_changes": [
+    "dependency-review"
+  ],
+  "blocked_path_prefixes": [
+    ".env",
+    "secrets/"
+  ],
+  "blocked_path_contains": [
+    "credential-material"
+  ],
+  "comment_on_decision": false
+}
