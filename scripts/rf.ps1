@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory=$true)]
-  [ValidateSet("setup","test","build","run","bench","agent-report","cycle-summary","poll-prs","merge-pr")]
+  [ValidateSet("setup","test","build","run","run-mobile","bench","agent-report","cycle-summary","poll-prs","merge-pr")]
   [string]$Task
   ,
   [int]$Pr = 0,
@@ -26,6 +26,10 @@ switch ($Task) {
     Pop-Location
   }
   "run" { python -m repo_foundry.api }
+  "run-mobile" {
+    $env:REPO_FOUNDRY_API_HOST = "0.0.0.0"
+    python -m repo_foundry.api
+  }
   "bench" { python -m repo_foundry.reconcile plan blueprints/example-repo.yaml --registry registry/repos.yaml }
   "agent-report" { python -m repo_foundry.reports agent-report }
   "cycle-summary" { python -m repo_foundry.cycle_summary append --from-sample }

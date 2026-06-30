@@ -1,4 +1,4 @@
-.PHONY: setup test build run bench agent-report cycle-summary poll-prs merge-pr
+.PHONY: setup test build run run-mobile bench agent-report cycle-summary poll-prs merge-pr
 
 setup:
 	python -m pip install -e ".[dev]"
@@ -12,6 +12,9 @@ build:
 
 run:
 	python -m repo_foundry.api
+
+run-mobile:
+	REPO_FOUNDRY_API_HOST=0.0.0.0 python -m repo_foundry.api
 
 bench:
 	python -m repo_foundry.reconcile plan blueprints/example-repo.yaml --registry registry/repos.yaml
