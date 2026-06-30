@@ -51,6 +51,11 @@ type PrStatusSnapshot = {
   linked_task: string | null;
   direction_item: string | null;
   artifact_path?: string;
+  operator_verdict?: {
+    status: string;
+    summary: string;
+    next_action: string;
+  };
 };
 
 type DashboardState = {
@@ -303,13 +308,16 @@ function SnapshotList({ snapshots }: { snapshots: PrStatusSnapshot[] }) {
       {visible.length ? visible.map((snapshot) => {
         const failing = snapshot.checks.failing_count;
         const unknown = snapshot.checks.unknown_count;
-        const status = snapshot.policy_decision === "eligible" ? "ready" : failing ? "failed" : unknown ? "watch" : snapshot.policy_decision;
+        const fallbackStatus = snapshot.policy_decision === "eligible" ? "ready" : failing ? "failed" : unknown ? "watch" : snapshot.policy_decision;
+        const verdict = snapshot.operator_verdict;
+        const status = verdict?.status ?? fallbackStatus;
         return (
           <article className="snapshot-row" key={`${snapshot.pull_request}-${snapshot.head_sha}`}>
             <div>
               <strong>#{snapshot.pull_request} {snapshot.repository}</strong>
               <span>{snapshot.head_branch} → {snapshot.base_branch} · {snapshot.merge_state} · {snapshot.policy_decision}</span>
-              <small>{snapshot.risk_note}</small>
+              {verdict ? <small>{verdict.summary}</small> : <small>{snapshot.risk_note}</small>}
+              {verdict ? <small>Next: {verdict.next_action}</small> : null}
               <small>{snapshot.checks.total_count} checks · {failing} failing · {unknown} unknown</small>
               {snapshot.artifact_path ? <small>{snapshot.artifact_path}</small> : null}
             </div>

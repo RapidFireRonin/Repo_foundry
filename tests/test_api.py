@@ -32,3 +32,65 @@ def test_create_direction_route_writes_registry_and_returns_item(tmp_path: Path,
     assert body["status"] == "active"
     saved = yaml.safe_load(registry.read_text(encoding="utf-8"))
     assert saved["directions"][0]["title"] == "Focus on GitHub adapter"
+
+
+def test_read_pr_status_snapshots_adds_operator_verdict(tmp_path: Path) -> None:
+    snapshot_dir = tmp_path / "RapidFireRonin_Repo_foundry" / "pr-22"
+    snapshot_dir.mkdir(parents=True)
+    snapshot_path = snapshot_dir / "20260630T120000Z.json"
+    snapshot_path.write_text(
+        """
+        {
+          "schema_version": "pr-status-snapshot/v1",
+          "captured_at": "2026-06-30T12:00:00Z",
+          "repository": "RapidFireRonin/Repo_foundry",
+          "pull_request": 22,
+          "display_url": "https://github.com/RapidFireRonin/Repo_foundry/pull/22",
+          "head_sha": "abc123",
+          "base_branch": "main",
+          "head_branch": "builder/example",
+          "mergeable": true,
+          "merge_state": "clean",
+          "merged": false,
+          "checks": {
+            "status": "completed",
+            "conclusion": "success",
+            "total_count": 3,
+            "failing_count": 0,
+            "unknown_count": 0,
+            "runs": []
+          },
+          "policy_decision": "eligible",
+          "risk_note": "low risk",
+          "rollback_note": "revert PR",
+          "linked_task": "#13",
+          "direction_item": null
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    snapshots = api.read_pr_status_snapshots(tmp_path)
+
+    assert snapshots[0]["artifact_path"] == str(snapshot_path)
+    assert snapshots[0]["operator_verdict"] == {
+        "status": "ready",
+        "summary": "Eligible for merge under the current policy snapshot.",
+        "next_action": "Merge using the configured safe merge method and record the completion log entry.",
+    }
+
+
+def test_snapshot_operator_verdict_blocks_failing_checks() -> None:
+    verdict = api.snapshot_operator_verdict(
+        {
+            "merged": False,
+            "mergeable": True,
+            "merge_state": "clean",
+            "policy_decision": "eligible",
+            "checks": {"failing_count": 2, "unknown_count": 0},
+        }
+    )
+
+    assert verdict["status"] == "blocked"
+    assert verdict["summary"] == "Blocked by 2 failing checks."
+    assert verdict["next_action"] == "Fix or rerun the failing check before attempting merge."
