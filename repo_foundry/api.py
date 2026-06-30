@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import json
 import os
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
@@ -71,6 +73,29 @@ def dashboard() -> DashboardState:
     )
 
 
+def read_pr_status_snapshots(artifact_root: Path | None = None, limit: int = 20) -> list[dict[str, Any]]:
+    root = artifact_root or repo_root() / "artifacts" / "pr-status"
+    if not root.exists():
+        return []
+
+    snapshots: list[dict[str, Any]] = []
+    for path in root.glob("*/pr-*/*.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if payload.get("schema_version") != "pr-status-snapshot/v1":
+            continue
+        payload["artifact_path"] = str(path)
+        snapshots.append(payload)
+
+    return sorted(
+        snapshots,
+        key=lambda item: (str(item.get("captured_at") or ""), int(item.get("pull_request") or 0)),
+        reverse=True,
+    )[:limit]
+
+
 def completion_state() -> dict:
     prs = fetch_completion_prs()
     ready = [pr for pr in prs if pr.get("decision", {}).get("allowed")]
@@ -78,6 +103,7 @@ def completion_state() -> dict:
     failed = [pr for pr in prs if pr.get("failed_checks")]
     stale = [pr for pr in prs if pr.get("stale")]
     merged = [pr for pr in prs if pr.get("payload", {}).get("merged")]
+    snapshots = read_pr_status_snapshots()
     next_action = "Merge ready PRs" if ready else "Fix blocked PRs" if blocked else "Poll open PRs"
     return {
         "ready": ready,
@@ -85,6 +111,7 @@ def completion_state() -> dict:
         "failed_checks": failed,
         "stale": stale,
         "recently_merged": merged[:5],
+        "latest_snapshots": snapshots,
         "next_action": next_action,
         "mode": "dry-run",
     }
