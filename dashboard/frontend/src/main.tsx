@@ -25,6 +25,34 @@ type Item = {
   created_at: string;
 };
 
+type PrStatusSnapshot = {
+  schema_version: string;
+  captured_at: string;
+  repository: string;
+  pull_request: number;
+  display_url: string;
+  head_sha: string;
+  base_branch: string;
+  head_branch: string;
+  mergeable: boolean | null;
+  merge_state: string;
+  merged: boolean;
+  checks: {
+    status: string;
+    conclusion: string | null;
+    total_count: number;
+    failing_count: number;
+    unknown_count: number;
+    runs: Array<{ name: string; status: string; conclusion: string | null; url: string | null }>;
+  };
+  policy_decision: string;
+  risk_note: string;
+  rollback_note: string;
+  linked_task: string | null;
+  direction_item: string | null;
+  artifact_path?: string;
+};
+
 type DashboardState = {
   repos: Item[];
   blueprints: Item[];
@@ -51,6 +79,7 @@ type DashboardState = {
     failed_checks: CompletionPr[];
     stale: CompletionPr[];
     recently_merged: CompletionPr[];
+    latest_snapshots: PrStatusSnapshot[];
     next_action: string;
     mode: string;
   };
@@ -85,6 +114,7 @@ const emptyState: DashboardState = {
     failed_checks: [],
     stale: [],
     recently_merged: [],
+    latest_snapshots: [],
     next_action: "Poll open PRs",
     mode: "dry-run",
   },
@@ -266,6 +296,31 @@ function DirectionQueue({ items }: { items: DashboardState["directions"] }) {
   );
 }
 
+function SnapshotList({ snapshots }: { snapshots: PrStatusSnapshot[] }) {
+  const visible = snapshots.slice(0, 4);
+  return (
+    <div className="snapshot-list">
+      {visible.length ? visible.map((snapshot) => {
+        const failing = snapshot.checks.failing_count;
+        const unknown = snapshot.checks.unknown_count;
+        const status = snapshot.policy_decision === "eligible" ? "ready" : failing ? "failed" : unknown ? "watch" : snapshot.policy_decision;
+        return (
+          <article className="snapshot-row" key={`${snapshot.pull_request}-${snapshot.head_sha}`}>
+            <div>
+              <strong>#{snapshot.pull_request} {snapshot.repository}</strong>
+              <span>{snapshot.head_branch} → {snapshot.base_branch} · {snapshot.merge_state} · {snapshot.policy_decision}</span>
+              <small>{snapshot.risk_note}</small>
+              <small>{snapshot.checks.total_count} checks · {failing} failing · {unknown} unknown</small>
+              {snapshot.artifact_path ? <small>{snapshot.artifact_path}</small> : null}
+            </div>
+            <code>{status}</code>
+          </article>
+        );
+      }) : <div className="empty-panel">No PR status snapshots yet. Run pr_monitor with --write-snapshots.</div>}
+    </div>
+  );
+}
+
 function CompletionPanel({ completion }: { completion: DashboardState["completion"] }) {
   const rows = [
     ["Ready", completion.ready.length, "good"],
@@ -301,6 +356,10 @@ function CompletionPanel({ completion }: { completion: DashboardState["completio
             <code>{pr.decision.allowed ? "ready" : pr.check_status}</code>
           </article>
         )) : <div className="empty-panel">No polled PRs yet.</div>}
+      </div>
+      <div>
+        <h3>Latest PR status artifacts</h3>
+        <SnapshotList snapshots={completion.latest_snapshots} />
       </div>
     </div>
   );
