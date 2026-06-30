@@ -16,7 +16,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect dependency manifest changes
+        id: dep_changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+
+          changed_files="$(git diff --name-only "$base" "$head")"
+          echo "$changed_files"
+
+          if echo "$changed_files" | grep -E '(^|/)(package.json|package-lock.json|pnpm-lock.yaml|yarn.lock|requirements.txt|pyproject.toml|poetry.lock|Pipfile|Pipfile.lock)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dependency Review
+        if: steps.dep_changes.outputs.changed == 'true'
+        uses: actions/dependency-review-action@v4
+
+      - name: Skip dependency review
+        if: steps.dep_changes.outputs.changed != 'true'
+        run: echo "No dependency manifest or lockfile changed; dependency review skipped."
+
   secret-scan:
     runs-on: ubuntu-latest
     permissions:
