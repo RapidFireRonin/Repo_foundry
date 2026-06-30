@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory=$true)]
-  [ValidateSet("setup","install","test","build","run","api","phone","run-mobile","bench","plan","agent-report","cycle-summary","poll-prs","merge-pr","health","pr-status","mission")]
+  [ValidateSet("setup","install","test","build","run","api","control","phone","run-mobile","bench","plan","agent-report","cycle-summary","poll-prs","merge-pr","health","pr-status","mission")]
   [string]$Task
   ,
   [int]$Pr = 0,
@@ -127,10 +127,40 @@ function Start-PhoneDashboard {
   Write-Host "Saved: artifacts\phone\latest-url.md"
 }
 
+function Open-ControlWindow {
+  $url = "http://127.0.0.1:5274"
+  $deadline = (Get-Date).AddSeconds(25)
+  do {
+    try {
+      Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 2 | Out-Null
+      break
+    } catch {
+      Start-Sleep -Milliseconds 750
+    }
+  } while ((Get-Date) -lt $deadline)
+
+  $browserCandidates = @(
+    "C:\Program Files\Google\Chrome\Application\chrome.exe",
+    "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+    "C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+  )
+  foreach ($browser in $browserCandidates) {
+    if (Test-Path $browser) {
+      Start-Process -FilePath $browser -ArgumentList @("--app=$url", "--new-window")
+      return
+    }
+  }
+  Start-Process $url
+}
+
 switch ($Task) {
   "setup" { Install-Backend }
   "install" { Install-Backend }
   "api" { & $Py -m repo_foundry.api }
+  "control" {
+    Start-PhoneDashboard
+    Open-ControlWindow
+  }
   "phone" { Start-PhoneDashboard }
   "run" { & $Py -m repo_foundry.api }
   "run-mobile" {
