@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chrono Rift: Echoes of the Broken Hour</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090b16;
+      --panel: rgba(17, 22, 38, 0.92);
+      --panel-strong: rgba(27, 34, 58, 0.96);
+      --line: rgba(166, 190, 255, 0.22);
+      --text: #eef3ff;
+      --muted: #aeb9d8;
+      --past: #f0b35f;
+      --present: #7be3ff;
+      --future: #b28cff;
+      --danger: #ff667d;
+      --good: #7dffbd;
+      --gold: #ffd36e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(240, 179, 95, 0.16), transparent 28rem),
+        radial-gradient(circle at 82% 18%, rgba(178, 140, 255, 0.16), transparent 26rem),
+        radial-gradient(circle at 50% 88%, rgba(123, 227, 255, 0.12), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 0.78rem 0.9rem;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 120ms ease, border 120ms ease, background 120ms ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.42); background: rgba(255, 255, 255, 0.13); }
+    button:disabled { opacity: 0.42; cursor: not-allowed; }
+    .game { width: min(1220px, 100%); margin: 0 auto; padding: 20px; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: start;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(21, 29, 54, 0.94), rgba(13, 16, 31, 0.96));
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    }
+    .eyebrow { color: var(--gold); text-transform: uppercase; letter-spacing: 0.13em; font-size: 0.76rem; font-weight: 900; }
+    h1 { margin: 0.25rem 0 0.6rem; font-size: clamp(1.65rem, 4vw, 3rem); line-height: 1; }
+    p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 300px; gap: 16px; margin-top: 16px; }
+    .panel, .story, .choices {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--panel);
+      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.24);
+    }
+    .panel { padding: 16px; }
+    .panel h2, .story h2 { margin: 0 0 10px; font-size: 1rem; }
+    .period {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+    .period.past { color: var(--past); }
+    .period.present { color: var(--present); }
+    .period.future { color: var(--future); }
+    .stat { margin: 12px 0; }
+    .stat-top { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 0.86rem; font-weight: 800; }
+    .bar { height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.09); margin-top: 6px; }
+    .fill { height: 100%; width: var(--value); background: linear-gradient(90deg, var(--good), var(--present)); border-radius: inherit; }
+    .fill.danger { background: linear-gradient(90deg, var(--danger), #ffb266); }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag { border: 1px solid var(--line); border-radius: 999px; padding: 7px 9px; background: rgba(255,255,255,0.07); font-size: 0.82rem; color: var(--muted); }
+    .story { min-height: 440px; padding: 22px; position: relative; overflow: hidden; }
+    .story:before {
+      content: "";
+      position: absolute;
+      inset: -40% auto auto 55%;
+      width: 280px;
+      height: 280px;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 50%;
+      box-shadow: 0 0 0 26px rgba(255,255,255,0.025), 0 0 0 56px rgba(255,255,255,0.018);
+      pointer-events: none;
+    }
+    .scene-text { position: relative; display: grid; gap: 14px; font-size: 1.02rem; line-height: 1.64; }
+    .scene-text strong { color: #ffffff; }
+    .objective { margin-top: 16px; border-left: 4px solid var(--gold); padding: 12px; background: rgba(255, 211, 110, 0.08); color: #ffe8ad; border-radius: 12px; }
+    .choices { padding: 16px; margin-top: 16px; display: grid; gap: 10px; }
+    .choice { display: block; text-align: left; width: 100%; }
+    .choice small { display: block; color: var(--muted); margin-top: 4px; font-weight: 600; }
+    .time-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .time-controls button.active.past { border-color: var(--past); color: var(--past); }
+    .time-controls button.active.present { border-color: var(--present); color: var(--present); }
+    .time-controls button.active.future { border-color: var(--future); color: var(--future); }
+    .log { max-height: 260px; overflow: auto; display: grid; gap: 8px; padding-right: 4px; }
+    .log-entry { border-left: 3px solid var(--line); padding: 8px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; color: var(--muted); font-size: 0.84rem; }
+    .ending { border: 1px solid rgba(255, 211, 110, 0.45); background: rgba(255, 211, 110, 0.09); padding: 16px; border-radius: 16px; margin-top: 16px; }
+    .meter-big { margin-top: 10px; border: 1px solid var(--line); border-radius: 16px; padding: 12px; background: rgba(0,0,0,0.16); }
+    .relations { display: grid; gap: 10px; }
+    .relation { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; color: var(--muted); }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-actions { justify-content: flex-start; }
+    }
+    @media (max-width: 560px) {
+      .game { padding: 12px; }
+      .hero, .panel, .story, .choices { border-radius: 16px; }
+      .time-controls { grid-template-columns: 1fr; }
+      button { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">Chapter One · The Clocktower Wound</span>
+        <h1>Chrono Rift: Echoes of the Broken Hour</h1>
+        <p>A text RPG where time travel is not decoration. Learn in the future, change the past, and keep the timeline stable long enough to survive midnight.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="saveBtn">Save</button>
+        <button id="loadBtn">Load</button>
+        <button id="restartBtn">Restart</button>
+        <button onclick="location.href='./'">Mission Control</button>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="panel">
+        <div id="periodBadge" class="period present">◷ Present</div>
+        <h2>Player</h2>
+        <div id="stats"></div>
+        <div class="meter-big">
+          <div class="stat-top"><span>Timeline Stability</span><strong id="stabilityText">100</strong></div>
+          <div class="bar"><div id="stabilityBar" class="fill danger" style="--value:100%"></div></div>
+        </div>
+        <h2 style="margin-top:18px">Time Jump</h2>
+        <div class="time-controls">
+          <button id="jumpPast">Past</button>
+          <button id="jumpPresent">Present</button>
+          <button id="jumpFuture">Future</button>
+        </div>
+        <h2 style="margin-top:18px">Relationships</h2>
+        <div id="relations" class="relations"></div>
+      </aside>
+
+      <section>
+        <article class="story">
+          <h2 id="sceneTitle"></h2>
+          <div id="sceneText" class="scene-text"></div>
+          <div id="objective" class="objective"></div>
+          <div id="ending" class="ending" hidden></div>
+        </article>
+        <div id="choices" class="choices"></div>
+      </section>
+
+      <aside class="panel">
+        <h2>Inventory</h2>
+        <div id="inventory" class="tag-list"></div>
+        <h2 style="margin-top:18px">Clues</h2>
+        <div id="clues" class="tag-list"></div>
+        <h2 style="margin-top:18px">Quest Log</h2>
+        <div id="quest" class="tag-list"></div>
+        <h2 style="margin-top:18px">History</h2>
+        <div id="log" class="log"></div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const storeKey = "chrono-rift-save-v1";
+    const initialState = () => ({
+      period: "present",
+      scene: "opening",
+      stats: { Resolve: 6, Insight: 5, Vitality: 7 },
+      stability: 100,
+      inventory: [],
+      clues: [],
+      quest: ["Stop the Clocktower collapse"],
+      relations: { "Archivist Vale": 0, "Iron Guild": 0 },
+      flags: {},
+      log: ["You wake with three versions of midnight in your head."],
+      ending: null
+    });
+    let state = initialState();
+
+    const scenes = {
+      opening: {
+        title: "The Minute After Midnight",
+        period: "present",
+        text: [
+          "The clocktower has exploded, but the bells are still ringing from inside the smoke.",
+          "You remember dying here. You also remember stopping it. Both memories feel true.",
+          "A silver fracture hangs in the air, showing the same street yesterday, now, and tomorrow."
+        ],
+        objective: "Find what caused the rupture. Time jump to gather evidence from other eras.",
+        choices: [
+          { label: "Search the rubble", hint: "+Rusty Gear, -Vitality", action: () => gain({ item: "Rusty Gear", stat: ["Vitality", -1], log: "You cut your hand on hot brass, but recover a gear etched with tomorrow's date." }) },
+          { label: "Question Archivist Vale", hint: "+clue if Insight four or higher", require: () => state.stats.Insight >= 4, action: () => gain({ clue: "Vale saw a blue lantern before the blast", relation: ["Archivist Vale", 1], log: "Vale whispers that a blue lantern was carried into the tower before midnight." }) },
+          { label: "Force open the tower gate", hint: "Requires Rusty Gear", require: () => has("inventory", "Rusty Gear"), action: () => setScene("towerGate", "The recovered gear fits the ruined gate like it was waiting for you.") }
+        ]
+      },
+      pastMarket: {
+        title: "Yesterday's Market",
+        period: "past",
+        text: [
+          "The clocktower still stands. Guild workers haul crates under lantern light.",
+          "One crate hums in a rhythm that matches your pulse. A younger Vale argues with the Iron Guild foreman."
+        ],
+        objective: "Change the right event before midnight without causing a paradox.",
+        choices: [
+          { label: "Buy the blue lantern from a nervous courier", hint: "Costs trust with Iron Guild, gains item", action: () => gain({ item: "Blue Lantern", relation: ["Iron Guild", -1], log: "The courier sells you the lantern and runs. The Guild will remember the theft." }) },
+          { label: "Warn younger Vale about the explosion", hint: "Paradox: -twenty stability, +Vale", action: () => gain({ stability: -20, relation: ["Archivist Vale", 2], clue: "Vale can hide one object from the reset", log: "Vale believes you, but the timeline shudders at the impossible warning." }) },
+          { label: "Hide the Rusty Gear in the archive wall", hint: "Requires Rusty Gear; creates future proof", require: () => has("inventory", "Rusty Gear"), action: () => gain({ clue: "Gear hidden in archive wall", log: "You hide the gear where only a future memory could find it." }) }
+        ]
+      },
+      futureRuins: {
+        title: "Tomorrow's Ruined City",
+        period: "future",
+        text: [
+          "The city is ash-gray and silent. The clocktower has become a black spine stabbing the sky.",
+          "A cracked monument lists the cause of the collapse: the lantern, the gear, and one witness who lied."
+        ],
+        objective: "Steal knowledge from tomorrow and use it to repair yesterday.",
+        choices: [
+          { label: "Read the monument inscription", hint: "+clue: lantern overcharged the gear", action: () => gain({ clue: "Lantern overcharged the tower gear", stat: ["Insight", 1], log: "The monument confirms the lantern was a power source, not a bomb." }) },
+          { label: "Salvage a chronal fuse", hint: "+item, -ten stability", action: () => gain({ item: "Chronal Fuse", stability: -10, log: "You take a fuse from a machine that has not been invented yet." }) },
+          { label: "Study the survivor mural", hint: "+clue: Vale lied to protect the Guild", action: () => gain({ clue: "Vale lied to protect the Guild", relation: ["Archivist Vale", -1], log: "The mural shows Vale sealing Guild records after the blast." }) }
+        ]
+      },
+      towerGate: {
+        title: "The Broken Gate",
+        period: "present",
+        text: [
+          "Inside the gate, gears grind in reverse. Each step ages the dust, then makes it young again.",
+          "A socket shaped like a lantern burns into the central mechanism. A fuse cradle sits empty below it."
+        ],
+        objective: "Use evidence from Past and Future to repair the clockheart.",
+        choices: [
+          { label: "Install the Blue Lantern blindly", hint: "Bad idea without the future clue", require: () => has("inventory", "Blue Lantern"), action: () => has("clues", "Lantern overcharged the tower gear") ? gain({ log: "You throttle the lantern instead of flooding it. The mechanism calms.", clue: "Lantern safely throttled" }) : end("Paradox Burn", "The lantern floods the clockheart. The tower becomes every midnight at once.") },
+          { label: "Fit the Chronal Fuse", hint: "Requires future item", require: () => has("inventory", "Chronal Fuse"), action: () => gain({ log: "The future-made fuse bridges the impossible circuit.", clue: "Clockheart fused" }) },
+          { label: "Confront Vale with the hidden truth", hint: "Requires Vale lie clue", require: () => has("clues", "Vale lied to protect the Guild"), action: () => gain({ relation: ["Archivist Vale", 2], clue: "Vale confession", log: "Vale admits the Guild tested the lantern under the tower." }) },
+          { label: "Seal the rift", hint: "Requires throttled lantern, fuse, and confession", require: () => has("clues", "Lantern safely throttled") && has("clues", "Clockheart fused") && has("clues", "Vale confession"), action: () => end("Chapter Complete", "The bells strike one clean note. The city remains wounded, but tomorrow is no longer a grave.") }
+        ]
+      }
+    };
+
+    function has(bucket, value) { return state[bucket].includes(value); }
+    function pushUnique(bucket, value) { if (value && !state[bucket].includes(value)) state[bucket].push(value); }
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function periodScene(period) { return period === "past" ? "pastMarket" : period === "future" ? "futureRuins" : state.scene === "towerGate" ? "towerGate" : "opening"; }
+    function setScene(scene, log) { state.scene = scene; if (log) state.log.unshift(log); render(); }
+    function gain(change) {
+      if (change.item) pushUnique("inventory", change.item);
+      if (change.clue) pushUnique("clues", change.clue);
+      if (change.stat) state.stats[change.stat[0]] = clamp(state.stats[change.stat[0]] + change.stat[1], 0, 10);
+      if (change.stability) state.stability = clamp(state.stability + change.stability, 0, 100);
+      if (change.relation) state.relations[change.relation[0]] = clamp(state.relations[change.relation[0]] + change.relation[1], -3, 3);
+      if (change.log) state.log.unshift(change.log);
+      if (state.stability <= 0) return end("Timeline Collapse", "The paradoxes finally agree on one thing: you should never have existed here.");
+      render();
+    }
+    function jump(period) {
+      if (state.ending) return;
+      state.period = period;
+      state.scene = periodScene(period);
+      state.stability = clamp(state.stability - (period === "present" ? 0 : 3), 0, 100);
+      state.log.unshift(`Time jump: ${period.toUpperCase()}. The fracture takes its price.`);
+      if (state.stability <= 0) return end("Timeline Collapse", "The jump tears the last thread of causality apart.");
+      render();
+    }
+    function end(title, text) { state.ending = { title, text }; state.log.unshift(`${title}: ${text}`); render(); }
+    function restart() { state = initialState(); render(); }
+    function save() { localStorage.setItem(storeKey, JSON.stringify(state)); state.log.unshift("Game saved to this browser."); render(); }
+    function load() { const raw = localStorage.getItem(storeKey); if (raw) { state = JSON.parse(raw); state.log.unshift("Saved timeline loaded."); render(); } }
+
+    function render() {
+      const scene = scenes[state.scene];
+      document.getElementById("periodBadge").className = `period ${state.period}`;
+      document.getElementById("periodBadge").textContent = `◷ ${state.period[0].toUpperCase()}${state.period.slice(1)}`;
+      document.getElementById("sceneTitle").textContent = scene.title;
+      document.getElementById("sceneText").innerHTML = scene.text.map(line => `<p>${line}</p>`).join("");
+      document.getElementById("objective").textContent = scene.objective;
+      document.getElementById("stabilityText").textContent = state.stability;
+      document.getElementById("stabilityBar").style.setProperty("--value", `${state.stability}%`);
+      document.getElementById("stats").innerHTML = Object.entries(state.stats).map(([name, value]) => `<div class="stat"><div class="stat-top"><span>${name}</span><strong>${value}/10</strong></div><div class="bar"><div class="fill" style="--value:${value * 10}%"></div></div></div>`).join("");
+      document.getElementById("inventory").innerHTML = (state.inventory.length ? state.inventory : ["Empty"]).map(x => `<span class="tag">${x}</span>`).join("");
+      document.getElementById("clues").innerHTML = (state.clues.length ? state.clues : ["No clues yet"]).map(x => `<span class="tag">${x}</span>`).join("");
+      document.getElementById("quest").innerHTML = state.quest.map(x => `<span class="tag">${x}</span>`).join("");
+      document.getElementById("relations").innerHTML = Object.entries(state.relations).map(([name, value]) => `<div class="relation"><span>${name}</span><strong>${value > 0 ? "+" : ""}${value}</strong></div>`).join("");
+      document.getElementById("log").innerHTML = state.log.slice(0, 10).map(x => `<div class="log-entry">${x}</div>`).join("");
+      const ending = document.getElementById("ending");
+      ending.hidden = !state.ending;
+      ending.innerHTML = state.ending ? `<strong>${state.ending.title}</strong><p>${state.ending.text}</p>` : "";
+      document.getElementById("choices").innerHTML = "";
+      scene.choices.forEach(choice => {
+        const ok = !choice.require || choice.require();
+        const btn = document.createElement("button");
+        btn.className = "choice";
+        btn.disabled = !ok || !!state.ending;
+        btn.innerHTML = `${choice.label}<small>${ok ? choice.hint : `Locked: ${choice.hint}`}</small>`;
+        btn.onclick = choice.action;
+        document.getElementById("choices").appendChild(btn);
+      });
+      ["Past", "Present", "Future"].forEach(name => {
+        const btn = document.getElementById(`jump${name}`);
+        btn.className = state.period === name.toLowerCase() ? `active ${state.period}` : "";
+      });
+    }
+
+    document.getElementById("jumpPast").onclick = () => jump("past");
+    document.getElementById("jumpPresent").onclick = () => jump("present");
+    document.getElementById("jumpFuture").onclick = () => jump("future");
+    document.getElementById("saveBtn").onclick = save;
+    document.getElementById("loadBtn").onclick = load;
+    document.getElementById("restartBtn").onclick = restart;
+    render();
+  </script>
+</body>
+</html>
