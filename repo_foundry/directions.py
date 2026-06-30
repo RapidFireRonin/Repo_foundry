@@ -10,6 +10,9 @@ from repo_foundry.models import DirectionItem, Registry
 from repo_foundry.reconcile import load_registry
 
 
+ALLOWED_DIRECTION_STATUSES = {"active", "paused", "done"}
+
+
 def list_directions(registry_path: str | Path = "registry/repos.yaml") -> list[DirectionItem]:
     return load_registry(registry_path).directions
 
@@ -41,6 +44,26 @@ def add_direction(
     return item
 
 
+def update_direction_status(
+    created_at: str,
+    status: str,
+    registry_path: str | Path = "registry/repos.yaml",
+    source: str = "dashboard",
+) -> DirectionItem | None:
+    if status not in ALLOWED_DIRECTION_STATUSES:
+        raise ValueError(f"unsupported direction status: {status}")
+
+    path = Path(registry_path)
+    registry = load_registry(path)
+    for item in registry.directions:
+        if item.created_at.isoformat() == created_at:
+            item.status = status
+            path.write_text(yaml.safe_dump(registry.model_dump(mode="json"), sort_keys=False), encoding="utf-8")
+            write_audit_event("direction_status", item.title, status=status, scope=item.scope, source=source)
+            return item
+    return None
+
+
 def mark_matching_direction_done(pr_title: str, registry_path: str | Path = "registry/repos.yaml") -> str | None:
     path = Path(registry_path)
     registry = load_registry(path)
@@ -68,6 +91,10 @@ def main() -> None:
     add_parser.add_argument("--details", default="")
     add_parser.add_argument("--avoid", action="append", default=[])
     add_parser.add_argument("--registry", default="registry/repos.yaml")
+    status_parser = sub.add_parser("status")
+    status_parser.add_argument("created_at")
+    status_parser.add_argument("status", choices=sorted(ALLOWED_DIRECTION_STATUSES))
+    status_parser.add_argument("--registry", default="registry/repos.yaml")
     args = parser.parse_args()
 
     if args.command == "list":
@@ -75,6 +102,11 @@ def main() -> None:
             print(f"{item.priority:03d} {item.scope} {item.title}: {item.desired_outcome}")
     if args.command == "add":
         item = add_direction(args.title, args.desired_outcome, args.priority, args.scope, args.details, args.avoid, "cli", args.registry)
+        print(item.model_dump_json(indent=2))
+    if args.command == "status":
+        item = update_direction_status(args.created_at, args.status, args.registry, source="cli")
+        if item is None:
+            raise SystemExit(f"No direction found for created_at={args.created_at}")
         print(item.model_dump_json(indent=2))
 
 
