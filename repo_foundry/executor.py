@@ -9,12 +9,14 @@ from repo_foundry.audit import write_audit_event
 from repo_foundry.blueprints import load_blueprint
 from repo_foundry.github_client import (
     GitUnavailable,
+    GitHubAuthUnavailable,
     GitHubCliUnavailable,
     branch_protection_payload,
     branch_protection_command,
     label_create_command,
     pr_create_command,
     repo_create_command,
+    require_github_credentials,
     run_git,
     run_gh,
 )
@@ -26,6 +28,27 @@ def execute_plan(plan: ReconcilePlan, blueprint_path: str | Path, dry_run: bool 
     blueprint = load_blueprint(blueprint_path)
     results: list[dict[str, Any]] = []
     pr_actions: list[PlanAction] = []
+
+    if not dry_run:
+        try:
+            credential_status = require_github_credentials()
+            write_audit_event(
+                "github_credential_preflight",
+                plan.blueprint,
+                available=True,
+                method=credential_status.method,
+            )
+        except (GitHubAuthUnavailable, GitHubCliUnavailable) as exc:
+            result = {
+                "action": "github_credential_preflight",
+                "target": plan.blueprint,
+                "dry_run": dry_run,
+                "status": "blocked",
+                "error": str(exc),
+                "remediation": "Run `gh auth login` locally or set `REPO_FOUNDRY_GH_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` in the runtime environment.",
+            }
+            write_audit_event("github_credential_preflight", plan.blueprint, available=False, result=result)
+            return {"blueprint": plan.blueprint, "dry_run": dry_run, "results": [result]}
 
     for action in plan.actions:
         result: dict[str, Any] = {
