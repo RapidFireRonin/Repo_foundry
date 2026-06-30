@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/RapidFireRonin/Repo_foundry/schemas/pr-status-snapshot.schema.json",
+  "title": "Repo Foundry PR Status Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "captured_at",
+    "repository",
+    "pull_request",
+    "head_sha",
+    "base_branch",
+    "head_branch",
+    "mergeable",
+    "checks",
+    "policy_decision",
+    "risk_note",
+    "rollback_note"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "pr-status-snapshot/v1"
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "pull_request": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "display_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "head_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "base_branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "head_branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mergeable": {
+      "type": ["boolean", "null"]
+    },
+    "merge_state": {
+      "type": "string"
+    },
+    "merged": {
+      "type": "boolean"
+    },
+    "merge_sha": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "conclusion", "total_count", "failing_count", "unknown_count", "runs"],
+      "properties": {
+        "status": {
+          "enum": ["queued", "in_progress", "completed", "unknown"]
+        },
+        "conclusion": {
+          "enum": ["success", "failure", "cancelled", "skipped", "neutral", "timed_out", "action_required", "unknown", null]
+        },
+        "total_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failing_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status", "conclusion", "url"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "status": {"type": "string", "minLength": 1},
+              "conclusion": {"type": ["string", "null"]},
+              "url": {"type": ["string", "null"], "format": "uri"}
+            }
+          }
+        }
+      }
+    },
+    "policy_decision": {
+      "enum": ["eligible", "blocked", "watch", "manual_review_required"]
+    },
+    "risk_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rollback_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "linked_task": {
+      "type": ["string", "null"]
+    },
+    "direction_item": {
+      "type": ["string", "null"]
+    }
+  }
+}
