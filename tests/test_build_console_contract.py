@@ -35,7 +35,8 @@ def test_backend_accepts_dashboard_direction_requests() -> None:
     assert "class DirectionCreateRequest" in source
     assert '@app.post("/api/directions")' in source
     assert 'source="dashboard"' in source
-    assert "registry/repos.yaml" in source
+    assert '"registry"' in source
+    assert '"repos.yaml"' in source
 
 
 def test_build_console_is_mobile_visible_and_styled() -> None:
@@ -45,4 +46,5 @@ def test_build_console_is_mobile_visible_and_styled() -> None:
     assert ".build-custom-goal" in source
     assert ".direction-composer.compact" in source
     assert "@media (max-width: 980px)" in source
-    assert ".build-custom-goal" in source[source.index("@media (max-width: 980px)"):]
+    mobile_css = source[source.index("@media (max-width: 980px)"):]
+    assert ".build-custom-goal" in mobile_css
