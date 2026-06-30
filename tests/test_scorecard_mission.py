@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from repo_foundry.scorecard import build_scorecard
-from repo_foundry.mission_control import product_controls, build_mission_control
+from repo_foundry.mission_control import product_controls, build_mission_control, executive_summary
 
 
 def test_scorecard_generation_shape():
@@ -50,3 +50,16 @@ def test_mission_control_contains_phone_access_and_product_showcase(monkeypatch)
 
     assert mission["operator_access"]["primary_phone_url"] == "http://192.168.1.200:5274"
     assert mission["product_showcase"]["products"]
+
+
+def test_executive_summary_distinguishes_credential_warning_from_local_health():
+    summary = executive_summary(
+        "Attention needed",
+        {"overall_status": "healthy"},
+        {"detected": True},
+        open_prs=0,
+        failed_checks=0,
+    )
+
+    assert "credential hardening is recommended" in summary
+    assert "local health is green" in summary

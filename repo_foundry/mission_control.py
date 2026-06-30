@@ -156,6 +156,22 @@ def product_controls(scorecard: dict[str, Any], directions: list[dict[str, Any]]
     }
 
 
+def executive_summary(status: str, health: dict[str, Any], token_warning: dict[str, Any], open_prs: int, failed_checks: int) -> str:
+    health_ok = health.get("overall_status") == "healthy"
+    token_detected = bool(token_warning.get("detected"))
+    if failed_checks:
+        return "Attention needed: one or more PR checks are failing."
+    if status != "Attention needed" and open_prs == 0:
+        return "Healthy: no open PRs are waiting on the shipper."
+    if token_detected and health_ok and open_prs == 0:
+        return "Attention needed: credential hardening is recommended, but local health is green and no open PRs are blocked."
+    if not health_ok and open_prs == 0:
+        return "Attention needed: one or more local health checks need cleanup, but no open PRs are blocked."
+    if status == "Attention needed" and open_prs == 0:
+        return "Attention needed: Mission Control found a non-blocking warning, but no open PRs are blocked."
+    return f"Watching: {open_prs} open PR(s) need shipper policy evaluation."
+
+
 def build_mission_control(root: Path | None = None) -> dict[str, Any]:
     base = root or repo_root()
     registry = load_registry(base / "registry" / "repos.yaml")
@@ -193,14 +209,7 @@ def build_mission_control(root: Path | None = None) -> dict[str, Any]:
     status = "Healthy"
     if pr_status.get("degraded") or failed_checks or health.get("overall_status") != "healthy" or token_warning.get("detected"):
         status = "Attention needed"
-    if status == "Attention needed" and open_prs == 0 and not failed_checks:
-        executive = "Attention needed: local health or credential hardening needs cleanup, but no open PRs are blocked."
-    elif open_prs == 0 and not failed_checks:
-        executive = "Healthy: no open PRs are waiting on the shipper."
-    elif failed_checks:
-        executive = "Attention needed: one or more PR checks are failing."
-    else:
-        executive = f"Watching: {open_prs} open PR(s) need shipper policy evaluation."
+    executive = executive_summary(status, health, token_warning, open_prs, failed_checks)
     return {
         "executive_status": {
             "status": status,
