@@ -12,6 +12,8 @@ REQUIRED_FILES = [
     "AGENT_CYCLE_LOG.md",
     "contracts/AUTONOMOUS_GOAL_CONTROL_CONTRACT.md",
     "contracts/DASHBOARD_DIRECTION_CONTROL_CONTRACT.md",
+    "contracts/PRODUCT_GALLERY_CONTRACT.md",
+    "registry/products.yaml",
 ]
 
 REQUIRED_AUTONOMOUS_SECTIONS = [
@@ -37,6 +39,14 @@ REQUIRED_DASHBOARD_SECTIONS = [
     "## Definition of done",
 ]
 
+REQUIRED_PRODUCT_GALLERY_SECTIONS = [
+    "## Purpose",
+    "## Product registry",
+    "## Agent requirements",
+    "## Dashboard requirements",
+    "## Definition of done",
+]
+
 
 def test_required_memory_and_contract_files_exist():
     missing = [path for path in REQUIRED_FILES if not (ROOT / path).exists()]
@@ -55,14 +65,22 @@ def test_dashboard_direction_contract_has_required_sections():
     assert not missing, f"Missing required dashboard contract sections: {missing}"
 
 
+def test_product_gallery_contract_has_required_sections():
+    contract = (ROOT / "contracts/PRODUCT_GALLERY_CONTRACT.md").read_text(encoding="utf-8")
+    missing = [section for section in REQUIRED_PRODUCT_GALLERY_SECTIONS if section not in contract]
+    assert not missing, f"Missing required product gallery contract sections: {missing}"
+
+
 def test_contracts_mention_visibility_and_auditability():
     combined = "\n".join(
         [
             (ROOT / "contracts/AUTONOMOUS_GOAL_CONTROL_CONTRACT.md").read_text(encoding="utf-8"),
             (ROOT / "contracts/DASHBOARD_DIRECTION_CONTROL_CONTRACT.md").read_text(encoding="utf-8"),
+            (ROOT / "contracts/PRODUCT_GALLERY_CONTRACT.md").read_text(encoding="utf-8"),
         ]
     ).lower()
     assert "audit" in combined
     assert "dashboard" in combined
     assert "rollback" in combined
     assert "direction" in combined
+    assert "registry/products.yaml" in combined

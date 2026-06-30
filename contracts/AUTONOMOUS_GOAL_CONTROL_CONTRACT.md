@@ -78,6 +78,7 @@ The dashboard should show:
 - Cycle summaries
 - Artifacts and logs
 - Current risk warnings
+- Playable or usable products registered in `registry/products.yaml`
 
 ## Definition of done
 
@@ -90,3 +91,5 @@ A repo is compliant with this contract when it has:
 - Validation workflow
 - Test coverage for required sections
 - Dashboard-ready status fields
+
+A user-facing product, game, tool, or usable repository is not done until it is registered in `registry/products.yaml` and appears in Mission Control's Playable / Usable Products gallery with launch or inspection links, proof, tests, and a quality verdict.
