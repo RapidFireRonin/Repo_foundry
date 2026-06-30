@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from repo_foundry.directions import add_direction, list_directions
+from repo_foundry.directions import add_direction, list_directions, mark_matching_direction_done
 
 
 def test_add_direction_updates_registry(tmp_path: Path) -> None:
@@ -26,3 +26,14 @@ def test_add_direction_updates_registry(tmp_path: Path) -> None:
     assert directions[0].details == "Add coverage for direction creation"
     assert directions[0].source == "dashboard"
     assert directions[0].created_at is not None
+
+
+def test_mark_matching_direction_done(tmp_path: Path) -> None:
+    registry = tmp_path / "repos.yaml"
+    registry.write_text(yaml.safe_dump({"repos": [], "directions": []}), encoding="utf-8")
+    add_direction("Improve dashboard", "Polish UI", registry_path=registry)
+
+    matched = mark_matching_direction_done("Improve dashboard with completion panel", registry)
+
+    assert matched == "Improve dashboard"
+    assert list_directions(registry)[0].status == "done"
