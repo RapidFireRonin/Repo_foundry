@@ -1,0 +1,60 @@
+name: Autonomous Completion Loop
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Repository to complete
+        required: true
+        default: RapidFireRonin/Repo_foundry
+      pr:
+        description: Optional PR number to merge if policy allows
+        required: false
+      execute:
+        description: Execute merge instead of dry-run
+        required: true
+        type: boolean
+        default: false
+  schedule:
+    - cron: "37 * * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  complete:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.REPO_FOUNDRY_GH_TOKEN || github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[dev]"
+      - name: Poll PRs
+        run: |
+          python -m repo_foundry.pr_monitor "${{ inputs.repo || 'RapidFireRonin/Repo_foundry' }}" > completion-poll.json
+          cat completion-poll.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Dry-run merge plan
+        if: ${{ inputs.pr != '' && inputs.execute != true }}
+        run: |
+          python -m repo_foundry.merge_executor "${{ inputs.repo }}" "${{ inputs.pr }}" > completion-merge.json
+          cat completion-merge.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Execute policy-approved merge
+        if: ${{ inputs.pr != '' && inputs.execute == true }}
+        run: |
+          python -m repo_foundry.merge_executor "${{ inputs.repo }}" "${{ inputs.pr }}" --execute > completion-merge.json
+          cat completion-merge.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-completion-loop
+          path: |
+            completion-poll.json
+            completion-merge.json
+            AGENT_CYCLE_LOG.md
+            logs/**

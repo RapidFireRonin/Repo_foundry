@@ -1,4 +1,4 @@
-.PHONY: setup test build run bench agent-report cycle-summary
+.PHONY: setup test build run bench agent-report cycle-summary poll-prs merge-pr
 
 setup:
 	python -m pip install -e ".[dev]"
@@ -21,3 +21,9 @@ agent-report:
 
 cycle-summary:
 	python -m repo_foundry.cycle_summary append --from-sample
+
+poll-prs:
+	python -m repo_foundry.pr_monitor RapidFireRonin/Repo_foundry
+
+merge-pr:
+	python -m repo_foundry.merge_executor RapidFireRonin/Repo_foundry $(PR)

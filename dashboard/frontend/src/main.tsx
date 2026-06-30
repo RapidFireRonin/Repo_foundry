@@ -45,6 +45,28 @@ type DashboardState = {
   }>;
   watch_items: Item[];
   cycle_entries: Item[];
+  completion: {
+    ready: CompletionPr[];
+    blocked: CompletionPr[];
+    failed_checks: CompletionPr[];
+    stale: CompletionPr[];
+    recently_merged: CompletionPr[];
+    next_action: string;
+    mode: string;
+  };
+};
+
+type CompletionPr = {
+  number: number;
+  title: string;
+  url: string;
+  branch: string;
+  mergeable: string;
+  check_status: string;
+  failed_checks: string[];
+  stale: boolean;
+  superseded_by?: number | null;
+  decision: { allowed?: boolean; risk?: string; reasons?: string[] };
 };
 
 const emptyState: DashboardState = {
@@ -57,6 +79,15 @@ const emptyState: DashboardState = {
   directions: [],
   watch_items: [],
   cycle_entries: [],
+  completion: {
+    ready: [],
+    blocked: [],
+    failed_checks: [],
+    stale: [],
+    recently_merged: [],
+    next_action: "Poll open PRs",
+    mode: "dry-run",
+  },
 };
 
 const apiBase = "http://127.0.0.1:8765";
@@ -230,6 +261,46 @@ function DirectionQueue({ items }: { items: DashboardState["directions"] }) {
   );
 }
 
+function CompletionPanel({ completion }: { completion: DashboardState["completion"] }) {
+  const rows = [
+    ["Ready", completion.ready.length, "good"],
+    ["Blocked", completion.blocked.length, "bad"],
+    ["Failed", completion.failed_checks.length, "bad"],
+    ["Stale", completion.stale.length, "warn"],
+    ["Merged", completion.recently_merged.length, "good"],
+  ];
+  const visible = [...completion.ready, ...completion.blocked, ...completion.stale].slice(0, 5);
+  return (
+    <div className="completion-panel">
+      <div className="completion-summary">
+        {rows.map(([label, value, tone]) => (
+          <div className={`completion-stat ${tone}`} key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="completion-next">
+        <strong>{completion.next_action}</strong>
+        <code>{completion.mode}</code>
+      </div>
+      <div className="completion-list">
+        {visible.length ? visible.map((pr) => (
+          <article className="completion-row" key={pr.number}>
+            <div>
+              <strong>#{pr.number} {pr.title}</strong>
+              <span>{pr.branch} · {pr.mergeable} · {pr.decision.risk ?? "unknown risk"}</span>
+              {pr.decision.reasons?.length ? <small>{pr.decision.reasons.join("; ")}</small> : null}
+              {pr.failed_checks.length ? <small>Failed: {pr.failed_checks.join(", ")}</small> : null}
+            </div>
+            <code>{pr.decision.allowed ? "ready" : pr.check_status}</code>
+          </article>
+        )) : <div className="empty-panel">No polled PRs yet.</div>}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [state, setState] = useState<DashboardState>(emptyState);
   const [cycleLog, setCycleLog] = useState("");
@@ -315,6 +386,9 @@ function App() {
           </Panel>
           <Panel title="Pull Requests" icon={<GitPullRequest size={18} />}>
             <ItemTable items={state.prs} />
+          </Panel>
+          <Panel title="Autonomous Completion" icon={<CheckCircle2 size={18} />}>
+            <CompletionPanel completion={state.completion} />
           </Panel>
           <Panel title="Autonomous Watchlist" icon={<AlertTriangle size={18} />}>
             <WatchQueue items={state.watch_items} />
