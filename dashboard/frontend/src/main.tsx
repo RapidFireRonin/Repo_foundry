@@ -209,6 +209,13 @@ type MissionControlState = {
     summary: string;
     next_product_goal: string;
     launchable_count: number;
+    quality_passed_count?: number;
+    needs_polish_count?: number;
+    quality_gate?: {
+      passing: number;
+      needs_polish: number;
+      rule: string;
+    };
     registry_path: string;
     completed_products: Array<ProductCard>;
     products: Array<ProductCard>;
@@ -254,6 +261,15 @@ type ProductCard = {
   visual_proof: string | null;
   test_evidence: string[];
   quality: string;
+  quality_gate?: {
+    status: string;
+    score: number;
+    verdict: string;
+    can_claim_done: boolean;
+    blockers: string[];
+    polish: string[];
+    strengths: string[];
+  };
   next_action: string;
   last_verified?: string | null;
   source?: string;
@@ -342,6 +358,13 @@ const emptyMission: MissionControlState = {
     summary: "Loading product proof.",
     next_product_goal: "Add a product direction.",
     launchable_count: 0,
+    quality_passed_count: 0,
+    needs_polish_count: 0,
+    quality_gate: {
+      passing: 0,
+      needs_polish: 0,
+      rule: "Loading product quality gate.",
+    },
     registry_path: "registry/products.yaml",
     completed_products: [],
     products: [],
@@ -420,17 +443,20 @@ function ProductShowcasePanel({ showcase }: { showcase: MissionControlState["pro
     <div className="product-showcase">
       <div className="operator-verdict">
         <strong>{showcase.summary}</strong>
-        <code>{showcase.launchable_count} launchable</code>
+        <code>{showcase.quality_passed_count ?? 0} pass gate</code>
       </div>
       <div className="product-library-note">
-        <strong>Completed products live here.</strong>
-        <span>Agents register usable or playable products in {showcase.registry_path}. Each card should have a launch link, proof, tests, and a quality verdict.</span>
+        <strong>Completed products live here only after proof.</strong>
+        <span>{showcase.quality_gate?.rule ?? `Agents register usable or playable products in ${showcase.registry_path}. Each card should have a launch link, proof, tests, and a quality verdict.`}</span>
       </div>
       <div className="product-grid usable-products">
         {visibleProducts.length ? visibleProducts.map((product) => {
           const launchState = product.launch_state ?? (product.open_url ? "launchable" : "proof-only");
+          const gate = product.quality_gate;
+          const gateStatus = gate?.status ?? "unchecked";
+          const gateIssues = [...(gate?.blockers ?? []), ...(gate?.polish ?? [])].slice(0, 3);
           return (
-          <article className={`product-card launch-${launchState}`} key={product.id || product.title}>
+          <article className={`product-card launch-${launchState} gate-${gateStatus}`} key={product.id || product.title}>
             {product.visual_proof ? <img src={`${apiBase}${product.visual_proof}`} alt={`${product.title} proof`} /> : <div className="product-proof-missing">No visual proof yet</div>}
             <div>
               <div className="product-card-top">
@@ -438,8 +464,15 @@ function ProductShowcasePanel({ showcase }: { showcase: MissionControlState["pro
                 <code>{product.status}</code>
               </div>
               <span className="product-kind">{product.kind ?? "product"} · {launchState}</span>
+              {gate ? (
+                <div className="product-gate">
+                  <strong>{gate.verdict}</strong>
+                  <code>{gate.score}/10 · {gate.status}</code>
+                </div>
+              ) : null}
               <span>{product.what_was_built}</span>
               <small>Quality: {product.quality}</small>
+              {gateIssues.length ? <small>Gate issues: {gateIssues.join(" · ")}</small> : null}
               <small>Tests: {product.test_evidence.slice(0, 2).join(" · ")}</small>
               <small>Next: {product.next_action}</small>
               <div className="product-actions">

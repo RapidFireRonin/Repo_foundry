@@ -7,6 +7,7 @@ from typing import Any
 import yaml
 
 from repo_foundry.models import repo_root
+from repo_foundry.product_quality import evaluate_product_quality
 
 
 def _latest_successful_runs(activity: dict[str, Any]) -> list[str]:
@@ -32,7 +33,7 @@ def _load_registered_products(root: Path) -> list[dict[str, Any]]:
     for item in products:
         if not isinstance(item, dict):
             continue
-        registered.append({
+        product = {
             "id": str(item.get("id") or item.get("title") or "product"),
             "title": str(item.get("title") or "Untitled product"),
             "status": str(item.get("status") or "unknown"),
@@ -47,7 +48,9 @@ def _load_registered_products(root: Path) -> list[dict[str, Any]]:
             "next_action": str(item.get("next_action") or "Open it, use it, and attach fresh proof after changes."),
             "last_verified": item.get("last_verified"),
             "source": "registry/products.yaml",
-        })
+        }
+        product["quality_gate"] = evaluate_product_quality(product)
+        registered.append(product)
     return registered
 
 
@@ -67,7 +70,7 @@ def _product_card(
     source: str = "mission-control",
 ) -> dict[str, Any]:
     launch_state = "launchable" if open_url else "proof-only"
-    return {
+    product = {
         "id": product_id,
         "title": title,
         "status": status,
@@ -83,6 +86,8 @@ def _product_card(
         "last_verified": datetime.now(timezone.utc).isoformat(),
         "source": source,
     }
+    product["quality_gate"] = evaluate_product_quality(product)
+    return product
 
 
 def build_product_showcase(
@@ -150,14 +155,26 @@ def build_product_showcase(
             continue
         seen_ids.add(product_id)
         products.append(product)
-    completed = [item for item in products if item["status"] in {"working", "ready", "complete", "playable", "usable"}]
+    completed = [
+        item for item in products
+        if item["status"] in {"working", "ready", "complete", "playable", "usable"}
+    ]
     launchable = [item for item in completed if item.get("open_url")]
+    quality_passed = [item for item in completed if item.get("quality_gate", {}).get("can_claim_done")]
+    needs_polish = [item for item in completed if not item.get("quality_gate", {}).get("can_claim_done")]
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "summary": f"{len(launchable)}/{len(products)} product(s) are launchable from Mission Control.",
+        "summary": f"{len(launchable)}/{len(products)} launchable; {len(quality_passed)}/{len(completed)} pass the product quality gate.",
         "products": products,
         "completed_products": completed,
         "launchable_count": len(launchable),
+        "quality_passed_count": len(quality_passed),
+        "needs_polish_count": len(needs_polish),
         "registry_path": "registry/products.yaml",
-        "next_product_goal": "Create a user-facing product from Garrett's next prompt, with tests, screenshots, PR links, and a completion log entry.",
+        "quality_gate": {
+            "passing": len(quality_passed),
+            "needs_polish": len(needs_polish),
+            "rule": "Do not call a product done unless it has launch/inspection access, proof, tests, a specific quality verdict, verification, and a next action.",
+        },
+        "next_product_goal": "Create a user-facing product from Garrett's next prompt, then pass the quality gate with launch, proof, tests, verdict, and verification.",
     }
