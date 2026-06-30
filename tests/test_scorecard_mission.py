@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from repo_foundry.scorecard import build_scorecard
-from repo_foundry.mission_control import product_controls
+from repo_foundry.mission_control import product_controls, build_mission_control
 
 
 def test_scorecard_generation_shape():
@@ -40,3 +40,13 @@ def test_product_controls_offer_interactive_builds():
     assert controls["operator_prompt"] == "What product should the agents build next?"
     assert controls["suggested_builds"][0]["title"] == "Generate visual proof for Mission Control"
     assert controls["suggested_builds"][1]["title"] == "Build the agent proof stream"
+
+
+def test_mission_control_contains_phone_access_and_product_showcase(monkeypatch):
+    monkeypatch.setenv("REPO_FOUNDRY_LAN_IP", "192.168.1.200")
+    monkeypatch.setenv("REPO_FOUNDRY_TAILSCALE_IP", "100.126.113.112")
+
+    mission = build_mission_control()
+
+    assert mission["operator_access"]["primary_phone_url"] == "http://192.168.1.200:5274"
+    assert mission["product_showcase"]["products"]

@@ -18,6 +18,7 @@ from repo_foundry.directions import add_direction, list_directions, update_direc
 from repo_foundry.health import collect_health
 from repo_foundry.mission_control import build_mission_control
 from repo_foundry.models import DashboardState, repo_root
+from repo_foundry.operator_access import collect_operator_access
 from repo_foundry.pr_status import collect_pr_status, write_pr_status_artifacts
 from repo_foundry.reconcile import build_plan, load_registry
 from repo_foundry.shipper_logs import latest_shipper_status
@@ -95,6 +96,11 @@ def changes() -> dict:
 @app.get("/api/visual-evidence")
 def visual_evidence() -> dict:
     return collect_visual_evidence()
+
+
+@app.get("/api/operator-access")
+def operator_access() -> dict:
+    return collect_operator_access()
 
 
 @app.get("/api/directions")
