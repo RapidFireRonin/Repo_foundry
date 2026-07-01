@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from repo_foundry.cycle_summary import append_summary, sample_summary
 from repo_foundry.db import fetch_completion_prs, fetch_dashboard_items, init_db
-from repo_foundry.directions import add_direction, list_directions, update_direction_status
+from repo_foundry.directions import add_direction, list_directions, reorder_direction, update_direction, update_direction_status
 from repo_foundry.health import collect_health
 from repo_foundry.mission_control import build_mission_control
 from repo_foundry.models import DashboardState, repo_root
@@ -55,6 +55,22 @@ class DirectionCreateRequest(BaseModel):
 class DirectionStatusRequest(BaseModel):
     created_at: str = Field(min_length=1)
     status: str = Field(pattern="^(active|paused|done)$")
+
+
+class DirectionUpdateRequest(BaseModel):
+    created_at: str = Field(min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    desired_outcome: str | None = Field(default=None, min_length=1, max_length=1000)
+    details: str | None = Field(default=None, max_length=2000)
+    priority: int | None = Field(default=None, ge=0, le=100)
+    scope: str | None = Field(default=None, min_length=1, max_length=160)
+    avoid: list[str] | None = None
+    status: str | None = Field(default=None, pattern="^(active|paused|done)$")
+
+
+class DirectionReorderRequest(BaseModel):
+    created_at: str = Field(min_length=1)
+    direction: str = Field(pattern="^(up|down|top|bottom)$")
 
 
 @app.on_event("startup")
@@ -208,6 +224,33 @@ def create_direction(request: DirectionCreateRequest) -> dict:
 @app.patch("/api/directions/status")
 def set_direction_status(request: DirectionStatusRequest) -> dict:
     item = update_direction_status(created_at=request.created_at, status=request.status, source="dashboard", registry_path=repo_root() / "registry" / "repos.yaml")
+    if item is None:
+        raise HTTPException(status_code=404, detail="Direction not found")
+    return item.model_dump(mode="json")
+
+
+@app.patch("/api/directions")
+def edit_direction(request: DirectionUpdateRequest) -> dict:
+    item = update_direction(
+        created_at=request.created_at,
+        title=request.title,
+        desired_outcome=request.desired_outcome,
+        details=request.details,
+        priority=request.priority,
+        scope=request.scope,
+        avoid=request.avoid,
+        status=request.status,
+        source="dashboard",
+        registry_path=repo_root() / "registry" / "repos.yaml",
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="Direction not found")
+    return item.model_dump(mode="json")
+
+
+@app.patch("/api/directions/reorder")
+def reorder_direction_endpoint(request: DirectionReorderRequest) -> dict:
+    item = reorder_direction(created_at=request.created_at, direction=request.direction, source="dashboard", registry_path=repo_root() / "registry" / "repos.yaml")
     if item is None:
         raise HTTPException(status_code=404, detail="Direction not found")
     return item.model_dump(mode="json")
